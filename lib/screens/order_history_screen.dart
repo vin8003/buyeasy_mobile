@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
+import 'order_detail_screen.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
   const OrderHistoryScreen({Key? key}) : super(key: key);
@@ -115,7 +116,14 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                               alignment: Alignment.centerRight,
                               child: TextButton(
                                 onPressed: () {
-                                  // Navigate to details screen if implemented
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => OrderDetailScreen(
+                                        orderId: order['id'],
+                                      ),
+                                    ),
+                                  );
                                 },
                                 child: const Text('View Full Receipt'),
                               ),

@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter/material.dart'; // For GlobalKey and NavigatorState
 
 class ApiService {
@@ -12,12 +12,20 @@ class ApiService {
   String? _accessToken;
   String? _refreshToken;
 
-  final String _baseUrl = Platform.isAndroid
-      ? 'http://10.0.2.2:8000/api/'
-      : 'http://127.0.0.1:8000/api/';
+  final String _baseUrl = kIsWeb
+      ? 'http://127.0.0.1:8000/api/'
+      : (defaultTargetPlatform == TargetPlatform.android
+            ? 'http://10.0.2.2:8000/api/'
+            : 'http://127.0.0.1:8000/api/');
 
   // Navigation key to allow navigating from outside the widget tree
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  String formatImageUrl(String? path) {
+    if (path == null || path.isEmpty) return 'https://via.placeholder.com/150';
+    if (path.startsWith('http')) return path;
+    return '$_baseUrl${path.startsWith('/') ? path.substring(1) : path}';
+  }
 
   // --- Concurrency / Refresh Locking ---
   bool _isRefreshing = false;

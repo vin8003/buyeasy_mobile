@@ -99,9 +99,7 @@ class _ProductCardState extends State<ProductCard> {
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
-    final String imageUrl = product.image.startsWith('http')
-        ? product.image
-        : 'http://127.0.0.1:8000${product.image}';
+    final String imageUrl = ApiService().formatImageUrl(product.image);
 
     return Container(
       decoration: BoxDecoration(
@@ -185,10 +183,10 @@ class _ProductCardState extends State<ProductCard> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 8.0),
+                padding: const EdgeInsets.fromLTRB(8.0, 2.0, 8.0, 6.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Flexible(
                       child: Column(

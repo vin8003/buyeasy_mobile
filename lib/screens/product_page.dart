@@ -77,9 +77,7 @@ class _ProductPageState extends State<ProductPage> {
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
 
-    final String imageUrl = widget.product.image.startsWith('http')
-        ? widget.product.image
-        : 'http://127.0.0.1:8000${widget.product.image}';
+    final String imageUrl = ApiService().formatImageUrl(widget.product.image);
 
     return Scaffold(
       appBar: AppBar(

@@ -78,7 +78,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   child: ListTile(
                     leading: item.productImage != null
                         ? Image.network(
-                            item.productImage!,
+                            ApiService().formatImageUrl(item.productImage),
                             width: 50,
                             height: 50,
                             fit: BoxFit.cover,

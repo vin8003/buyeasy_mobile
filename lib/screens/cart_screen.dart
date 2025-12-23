@@ -71,11 +71,7 @@ class _CartScreenState extends State<CartScreen> {
               name: item['product_name'],
               price: double.parse(item['product_price'].toString()),
               quantity: item['quantity'],
-              imageUrl: item['product_image'] != null
-                  ? (item['product_image'].toString().startsWith('http')
-                        ? item['product_image']
-                        : 'http://127.0.0.1:8000${item['product_image']}')
-                  : 'https://via.placeholder.com/150',
+              imageUrl: ApiService().formatImageUrl(item['product_image']),
             );
           }).toList();
           _totalPrice = double.parse(
@@ -123,6 +119,8 @@ class _CartScreenState extends State<CartScreen> {
   void decrementQty(int index) {
     if (cartItems[index].quantity > 1) {
       _updateQuantity(index, cartItems[index].quantity - 1);
+    } else {
+      removeItem(index);
     }
   }
 
