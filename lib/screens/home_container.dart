@@ -92,10 +92,10 @@ class _HomeContainerState extends State<HomeContainer> {
             CartScreen(retailerId: _selectedRetailer?.id);
         break;
       case '/wishlist':
-        builder = (BuildContext context) => const WishlistScreen();
+        builder = (BuildContext context) => WishlistScreen();
         break;
       case '/profile':
-        builder = (BuildContext context) => const ProfileScreen();
+        builder = (BuildContext context) => ProfileScreen();
         break;
       case '/product':
         // Handle Product Page inside nested navigator
