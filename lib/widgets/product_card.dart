@@ -5,15 +5,26 @@ import '../services/api_service.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
+  final bool isWishlisted;
 
-  const ProductCard({Key? key, required this.product}) : super(key: key);
+  const ProductCard({
+    Key? key,
+    required this.product,
+    this.isWishlisted = false,
+  }) : super(key: key);
 
   @override
   State<ProductCard> createState() => _ProductCardState();
 }
 
 class _ProductCardState extends State<ProductCard> {
-  bool _isWishlisted = false;
+  late bool _isWishlisted;
+
+  @override
+  void initState() {
+    super.initState();
+    _isWishlisted = widget.isWishlisted;
+  }
 
   Future<void> _addToCart(BuildContext context) async {
     try {

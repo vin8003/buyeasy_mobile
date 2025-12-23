@@ -22,6 +22,7 @@ class CategoryProductsScreen extends StatefulWidget {
 class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   final ApiService _apiService = ApiService();
   List<Product> _products = [];
+  Set<int> _wishlistedProductIds = {};
   bool _isLoading = true;
   String _errorMessage = '';
   SortOption _selectedSort = SortOption.name;
@@ -47,9 +48,20 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
     });
 
     try {
-      final response = await _apiService.getProducts(widget.retailerId!);
-      if (response.statusCode == 200) {
-        final List<dynamic> productJson = response.data['results'];
+      final results = await Future.wait([
+        _apiService.getProducts(widget.retailerId!),
+        _apiService.getWishlist(),
+      ]);
+
+      final productsResponse = results[0];
+      final wishlistResponse = results[1];
+
+      if (productsResponse.statusCode == 200 &&
+          wishlistResponse.statusCode == 200) {
+        final List<dynamic> productJson = productsResponse.data['results'];
+        final List<dynamic> wishlistJson = wishlistResponse.data is List
+            ? wishlistResponse.data
+            : wishlistResponse.data['results'] ?? [];
         final allProducts = productJson
             .map((json) {
               try {
@@ -62,6 +74,10 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             .cast<Product>()
             .toList();
 
+        final wishlistedIds = wishlistJson
+            .map((json) => json['product'] as int)
+            .toSet();
+
         setState(() {
           // Filter by category
           // Note: Ensure the casing matches. Backend category names vs UI category names.
@@ -69,6 +85,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
           _products = allProducts
               .where((p) => p.categoryName == widget.categoryName)
               .toList();
+          _wishlistedProductIds = wishlistedIds;
           _sortProducts();
           _isLoading = false;
         });
@@ -335,7 +352,10 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         mainAxisSpacing: 16,
       ),
       itemBuilder: (ctx, i) {
-        return ProductCard(product: _products[i]);
+        return ProductCard(
+          product: _products[i],
+          isWishlisted: _wishlistedProductIds.contains(_products[i].id),
+        );
       },
     );
   }

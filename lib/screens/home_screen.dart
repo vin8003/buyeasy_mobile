@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Product> _products = [];
   List<Category> _categories = [];
   List<Product> _filteredProducts = [];
+  Set<int> _wishlistedProductIds = {};
   int? _selectedCategoryId;
   bool _isLoading = true;
   String _errorMessage = '';
@@ -49,15 +50,21 @@ class _HomeScreenState extends State<HomeScreen> {
       final results = await Future.wait([
         _apiService.getProducts(widget.retailer.id),
         _apiService.getCategories(),
+        _apiService.getWishlist(),
       ]);
 
       final productsResponse = results[0];
       final categoriesResponse = results[1];
+      final wishlistResponse = results[2];
 
       if (productsResponse.statusCode == 200 &&
-          categoriesResponse.statusCode == 200) {
+          categoriesResponse.statusCode == 200 &&
+          wishlistResponse.statusCode == 200) {
         final List<dynamic> productJson = productsResponse.data['results'];
         final List<dynamic> categoryJson = categoriesResponse.data;
+        final List<dynamic> wishlistJson = wishlistResponse.data is List
+            ? wishlistResponse.data
+            : wishlistResponse.data['results'] ?? [];
 
         final products = productJson
             .map((json) {
@@ -75,10 +82,15 @@ class _HomeScreenState extends State<HomeScreen> {
             .map((json) => Category.fromJson(json))
             .toList();
 
+        final wishlistedIds = wishlistJson
+            .map((json) => json['product'] as int)
+            .toSet();
+
         setState(() {
           _products = products;
           _filteredProducts = products; // Initially show all
           _categories = categories;
+          _wishlistedProductIds = wishlistedIds;
           _isLoading = false;
         });
       } else {
@@ -313,7 +325,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             arguments: _filteredProducts[i],
                           );
                         },
-                        child: ProductCard(product: _filteredProducts[i]),
+                        child: ProductCard(
+                          product: _filteredProducts[i],
+                          isWishlisted: _wishlistedProductIds.contains(
+                            _filteredProducts[i].id,
+                          ),
+                        ),
                       ),
                       childCount: _filteredProducts.length,
                     ),

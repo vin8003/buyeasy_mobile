@@ -16,6 +16,7 @@ class _CartScreenState extends State<CartScreen> {
   bool _isLoading = true;
   double _totalPrice = 0.0;
   List<CartItem> cartItems = [];
+  Set<int> _wishlistedProductIds = {};
 
   @override
   void initState() {
@@ -44,10 +45,25 @@ class _CartScreenState extends State<CartScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService().getCart(widget.retailerId!);
-      if (response.statusCode == 200) {
-        final data = response.data;
+      final results = await Future.wait([
+        ApiService().getCart(widget.retailerId!),
+        ApiService().getWishlist(),
+      ]);
+
+      final cartResponse = results[0];
+      final wishlistResponse = results[1];
+
+      if (cartResponse.statusCode == 200 &&
+          wishlistResponse.statusCode == 200) {
+        final data = cartResponse.data;
+        final List<dynamic> wishlistJson = wishlistResponse.data is List
+            ? wishlistResponse.data
+            : wishlistResponse.data['results'] ?? [];
+
         setState(() {
+          _wishlistedProductIds = wishlistJson
+              .map((json) => json['product'] as int)
+              .toSet();
           cartItems = (data['items'] as List).map((item) {
             return CartItem(
               id: item['id'],
@@ -136,24 +152,54 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  Future<void> _addToWishlist(int index) async {
+  Future<void> _toggleWishlist(int index) async {
     final item = cartItems[index];
+    final bool isAdding = !_wishlistedProductIds.contains(item.productId);
+
+    setState(() {
+      if (isAdding) {
+        _wishlistedProductIds.add(item.productId);
+      } else {
+        _wishlistedProductIds.remove(item.productId);
+      }
+    });
+
     try {
-      await ApiService().addToWishlist(item.productId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${item.name} added to wishlist'),
-            backgroundColor: Colors.pinkAccent,
-            duration: const Duration(seconds: 1),
-          ),
-        );
+      if (isAdding) {
+        await ApiService().addToWishlist(item.productId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${item.name} added to wishlist'),
+              backgroundColor: Colors.pinkAccent,
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+      } else {
+        await ApiService().removeFromWishlist(item.productId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${item.name} removed from wishlist'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
       }
     } catch (e) {
+      // Revert on error
+      setState(() {
+        if (isAdding) {
+          _wishlistedProductIds.remove(item.productId);
+        } else {
+          _wishlistedProductIds.add(item.productId);
+        }
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Failed to add to wishlist'),
+            content: Text('Failed to update wishlist'),
             backgroundColor: Colors.red,
           ),
         );
@@ -282,11 +328,13 @@ class _CartScreenState extends State<CartScreen> {
                               onPressed: () => removeItem(index),
                             ),
                             IconButton(
-                              icon: const Icon(
-                                Icons.favorite_border,
+                              icon: Icon(
+                                _wishlistedProductIds.contains(item.productId)
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
                                 color: Colors.pinkAccent,
                               ),
-                              onPressed: () => _addToWishlist(index),
+                              onPressed: () => _toggleWishlist(index),
                             ),
                           ],
                         ),
