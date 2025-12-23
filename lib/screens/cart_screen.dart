@@ -118,12 +118,46 @@ class _CartScreenState extends State<CartScreen> {
 
     try {
       await ApiService().removeCartItem(item.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item.name} removed from cart'),
+            backgroundColor: Colors.blueGrey,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
       _fetchCart();
     } catch (e) {
       _fetchCart(); // Refresh to restore state on error
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to remove item')));
+    }
+  }
+
+  Future<void> _addToWishlist(int index) async {
+    final item = cartItems[index];
+    try {
+      await ApiService().addToWishlist(item.productId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item.name} added to wishlist'),
+            backgroundColor: Colors.pinkAccent,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to add to wishlist'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -238,12 +272,23 @@ class _CartScreenState extends State<CartScreen> {
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                          ),
-                          onPressed: () => removeItem(index),
+                        Column(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
+                              onPressed: () => removeItem(index),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.favorite_border,
+                                color: Colors.pinkAccent,
+                              ),
+                              onPressed: () => _addToWishlist(index),
+                            ),
+                          ],
                         ),
                       ],
                     ),

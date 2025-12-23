@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'signup_screen.dart';
 import 'home_container.dart';
@@ -38,10 +39,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _apiService.login(
-        _phoneController.text,
-        _passwordController.text,
-      );
+      final String phone = '+91${_phoneController.text.trim()}';
+      final response = await _apiService.login(phone, _passwordController.text);
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -93,18 +92,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
+                      maxLength: 10,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         labelText: 'Phone Number',
-                        hintText: '+91xxxxxxxxxx',
+                        hintText: 'Enter 10 digit number',
+                        prefixText: '+91 ',
+                        counterText: '',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty)
+                        if (value == null || value.isEmpty) {
                           return 'Please enter your phone number';
-                        if (!value.startsWith('+') || value.length < 11)
-                          return 'Enter a valid phone number with country code';
+                        }
+                        if (value.length != 10) {
+                          return 'Please enter a valid 10-digit number';
+                        }
                         return null;
                       },
                     ),
@@ -148,8 +153,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     : Text('Log In'),
               ),
               TextButton(onPressed: () {}, child: Text('Forgot Password?')),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text("Don't have an account?"),
                   TextButton(

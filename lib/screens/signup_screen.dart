@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'login_screen.dart';
 import '../services/api_service.dart';
@@ -53,7 +54,7 @@ class _SignupScreenState extends State<SignupScreen> {
       final response = await _apiService.signup({
         'username': _usernameController.text,
         'email': _emailController.text,
-        'phone_number': _phoneController.text,
+        'phone_number': '+91${_phoneController.text.trim()}',
         'password': _passwordController.text,
         'password_confirm': _confirmPasswordController.text,
         'user_type': 'customer',
@@ -153,9 +154,13 @@ class _SignupScreenState extends State<SignupScreen> {
                     TextFormField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
+                      maxLength: 10,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: InputDecoration(
                         labelText: 'Phone Number',
-                        hintText: '+91xxxxxxxxxx',
+                        hintText: 'Enter 10 digit number',
+                        prefixText: '+91 ',
+                        counterText: '',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8.0),
                         ),
@@ -164,8 +169,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your phone number';
                         }
-                        if (!value.startsWith('+') || value.length < 11) {
-                          return 'Enter a valid phone number with country code';
+                        if (value.length != 10) {
+                          return 'Please enter a valid 10-digit number';
                         }
                         return null;
                       },

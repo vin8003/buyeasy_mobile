@@ -153,6 +153,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  int _calculateColumns(double width) {
+    if (width > 1200) return 6;
+    if (width > 900) return 4;
+    if (width > 600) return 3;
+    return 2;
+  }
+
+  double _calculateAspectRatio(double width) {
+    return 0.6;
+  }
+
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -171,73 +182,144 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    final width = MediaQuery.of(context).size.width;
+    final columns = _calculateColumns(width);
+    final aspectRatio = _calculateAspectRatio(width);
+
     return RefreshIndicator(
       onRefresh: _fetchData,
-      child: Column(
-        children: [
-          // Categories List
+      child: CustomScrollView(
+        slivers: [
+          // Categories Header
           if (_categories.isNotEmpty)
-            SizedBox(
-              height: 50,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                itemCount: _categories.length + 1, // +1 for "All"
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    final isSelected = _selectedCategoryId == null;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ChoiceChip(
-                        label: const Text('All'),
-                        selected: isSelected,
-                        onSelected: (_) => _filterProducts(null),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Categories',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
-                    );
-                  }
-                  final category = _categories[index - 1];
-                  final isSelected = _selectedCategoryId == category.id;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      label: Text(category.name),
-                      selected: isSelected,
-                      onSelected: (_) => _filterProducts(category.id),
                     ),
-                  );
-                },
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/categories');
+                      },
+                      child: const Text('See All'),
+                    ),
+                  ],
+                ),
               ),
             ),
 
-          // Products Grid
-          Expanded(
-            child: _filteredProducts.isEmpty
-                ? const Center(child: Text('No products found.'))
-                : GridView.builder(
-                    padding: const EdgeInsets.all(10.0),
-                    itemCount: _filteredProducts.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 2 / 3,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
+          // Categories List
+          if (_categories.isNotEmpty)
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 45,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _categories.length + 1,
+                  itemBuilder: (context, index) {
+                    final bool isSelected =
+                        (index == 0 && _selectedCategoryId == null) ||
+                        (index > 0 &&
+                            _selectedCategoryId == _categories[index - 1].id);
+
+                    final String label = index == 0
+                        ? 'All'
+                        : _categories[index - 1].name;
+                    final int? categoryId = index == 0
+                        ? null
+                        : _categories[index - 1].id;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: ChoiceChip(
+                        label: Text(label),
+                        selected: isSelected,
+                        onSelected: (_) => _filterProducts(categoryId),
+                        selectedColor: Colors.blueAccent,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black87,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          fontSize: 13,
                         ),
-                    itemBuilder: (ctx, i) => GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/product',
-                          arguments: _filteredProducts[i],
-                        );
-                      },
-                      child: ProductCard(product: _filteredProducts[i]),
+                        backgroundColor: Colors.white,
+                        elevation: isSelected ? 2 : 0,
+                        pressElevation: 4,
+                        shadowColor: Colors.blueAccent.withOpacity(0.3),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(
+                            color: isSelected
+                                ? Colors.blueAccent
+                                : Colors.grey[300]!,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+          // Products Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: Text(
+                _selectedCategoryId == null
+                    ? 'Featured Products'
+                    : 'Products in ${_categories.firstWhere((c) => c.id == _selectedCategoryId).name}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+
+          // Products Grid
+          _filteredProducts.isEmpty
+              ? const SliverFillRemaining(
+                  child: Center(child: Text('No products found.')),
+                )
+              : SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverGrid(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      childAspectRatio: aspectRatio,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) => GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/product',
+                            arguments: _filteredProducts[i],
+                          );
+                        },
+                        child: ProductCard(product: _filteredProducts[i]),
+                      ),
+                      childCount: _filteredProducts.length,
                     ),
                   ),
-          ),
+                ),
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
         ],
       ),
     );

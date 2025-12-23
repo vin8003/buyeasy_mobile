@@ -49,8 +49,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _firstNameController.text = data['first_name'] ?? '';
         _lastNameController.text = data['last_name'] ?? '';
         _emailController.text = data['email'] ?? '';
-        // Assuming phone number comes from the profile endpoint
-        _phoneNumberController.text = data['phone_number'] ?? '';
+        String phone = data['phone_number'] ?? '';
+        if (phone.startsWith('+91')) {
+          phone = phone.substring(3);
+        }
+        _phoneNumberController.text = phone;
       } else {
         throw 'Failed to load profile';
       }
@@ -184,8 +187,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           controller: _phoneNumberController,
                           decoration: InputDecoration(
                             labelText: 'Phone Number',
+                            prefixText: '+91 ',
                             filled: true,
-                            fillColor: Colors.grey[200],
+                            fillColor: Colors.grey[100],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
                           ),
                           readOnly: true,
                         ),
@@ -227,6 +235,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
                       Navigator.pushNamed(context, '/orders');
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onTap: () async {
+                      // Confirm Logout
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Logout'),
+                          content: const Text(
+                            'Are you sure you want to logout?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text(
+                                'Logout',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        await _apiService.logout();
+                      }
                     },
                   ),
                 ],

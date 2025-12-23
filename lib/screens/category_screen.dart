@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import '../services/api_service.dart';
 import '../models/category.dart';
 import 'category_products_screen.dart';
@@ -83,16 +82,20 @@ class _CategoryScreenState extends State<CategoryScreen> {
               ),
             )
           : GridView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 3 / 2,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+                childAspectRatio: 0.85,
               ),
               itemCount: _categories.length,
               itemBuilder: (context, index) {
                 final category = _categories[index];
+                // Generate a consistent color based on category name
+                final Color categoryColor = Colors
+                    .primaries[category.name.length % Colors.primaries.length];
+
                 return GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -108,34 +111,48 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.15),
+                          color: categoryColor.withOpacity(0.1),
                           spreadRadius: 2,
-                          blurRadius: 5,
-                          offset: const Offset(0, 3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Using a generic icon for now as Category model might not have icon yet
-                        // Ideally backend sends icon URL or we map name to icon
-                        const Icon(
-                          Icons.category,
-                          size: 40,
-                          color: Colors.blue,
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: categoryColor.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            _getCategoryIcon(category.name),
+                            size: 32,
+                            color: categoryColor,
+                          ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 15),
                         Text(
                           category.name,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                             color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Explore',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -145,5 +162,17 @@ class _CategoryScreenState extends State<CategoryScreen> {
               },
             ),
     );
+  }
+
+  IconData _getCategoryIcon(String name) {
+    name = name.toLowerCase();
+    if (name.contains('fruit') || name.contains('vegetable')) return Icons.eco;
+    if (name.contains('dairy') || name.contains('milk')) return Icons.egg;
+    if (name.contains('beverage') || name.contains('drink'))
+      return Icons.local_drink;
+    if (name.contains('snack')) return Icons.fastfood;
+    if (name.contains('bakery')) return Icons.bakery_dining;
+    if (name.contains('meat')) return Icons.set_meal;
+    return Icons.category;
   }
 }

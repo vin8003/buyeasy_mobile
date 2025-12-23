@@ -24,7 +24,7 @@ class SearchResultsScreen extends StatelessWidget {
               itemCount: searchResults.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 2 / 3,
+                childAspectRatio: 0.6,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import 'package:dio/dio.dart';
 
@@ -15,8 +16,26 @@ class PhoneVerificationScreen extends StatefulWidget {
 
 class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   final _otpController = TextEditingController();
+  late final TextEditingController _phoneController;
   final _apiService = ApiService();
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    String phone = widget.phoneNumber;
+    if (phone.startsWith('+91')) {
+      phone = phone.substring(3);
+    }
+    _phoneController = TextEditingController(text: phone);
+  }
+
+  @override
+  void dispose() {
+    _otpController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,18 +47,34 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Enter the OTP sent to ${widget.phoneNumber}',
+            const Text(
+              'Enter the OTP sent to your phone number',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 24),
+            TextField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                hintText: 'Enter 10 digit number',
+                prefixText: '+91 ',
+                counterText: '',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.phone),
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _otpController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'OTP Code',
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.lock_outline),
               ),
               maxLength: 6,
             ),
@@ -56,7 +91,13 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
             const SizedBox(height: 16),
             TextButton(
               onPressed: _isLoading ? null : _resendOtp,
-              child: const Text('Resend OTP'),
+              child: const Text('Update & Resend OTP'),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'If you entered the wrong number, you can edit it above and click "Update & Resend OTP".',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
@@ -66,6 +107,8 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
 
   Future<void> _verifyOtp() async {
     final otp = _otpController.text.trim();
+    final phone = '+91${_phoneController.text.trim()}';
+
     if (otp.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid 6-digit OTP')),
@@ -76,7 +119,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _apiService.verifyOtp(widget.phoneNumber, otp);
+      final response = await _apiService.verifyOtp(phone, otp);
       if (response.statusCode == 200) {
         // Update tokens if provided
         if (response.data['tokens'] != null) {
@@ -111,9 +154,31 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   }
 
   Future<void> _resendOtp() async {
+    final newPhone = '+91${_phoneController.text.trim()}';
+
+    if (_phoneController.text.trim().length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid 10-digit phone number'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      // Use authenticated request since we expect the user to be logged in here
+      // 1. If phone number changed, update profile first
+      if (newPhone != widget.phoneNumber) {
+        final updateResponse = await _apiService.updateUserProfile({
+          'phone_number': newPhone,
+        });
+
+        if (updateResponse.statusCode != 200) {
+          throw 'Failed to update phone number';
+        }
+      }
+
+      // 2. Request new OTP
       final response = await _apiService.requestPhoneVerification();
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(
@@ -121,9 +186,17 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
         ).showSnackBar(const SnackBar(content: Text('OTP sent successfully')));
       }
     } catch (e) {
+      String errorMessage = 'Failed to resend OTP';
+      if (e is DioException && e.response?.data != null) {
+        final data = e.response?.data;
+        if (data is Map) {
+          errorMessage =
+              data['phone_number']?[0] ?? data['error'] ?? errorMessage;
+        }
+      }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to resend OTP')));
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     } finally {
       setState(() => _isLoading = false);
     }

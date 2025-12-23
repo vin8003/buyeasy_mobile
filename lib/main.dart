@@ -11,6 +11,7 @@ import 'screens/profile_screen.dart';
 import 'screens/setting_screen.dart';
 import 'screens/order_history_screen.dart';
 import 'models/product.dart';
+import 'services/api_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: ApiService().navigatorKey,
       title: 'Shop Easyy',
       theme: ThemeData(
         primarySwatch: Colors.teal,

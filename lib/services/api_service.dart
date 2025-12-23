@@ -13,8 +13,8 @@ class ApiService {
   String? _refreshToken;
 
   final String _baseUrl = Platform.isAndroid
-      ? 'http://10.0.2.2:8000/api'
-      : 'http://127.0.0.1:8000/api';
+      ? 'http://10.0.2.2:8000/api/'
+      : 'http://127.0.0.1:8000/api/';
 
   // Navigation key to allow navigating from outside the widget tree
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -54,7 +54,7 @@ class ApiService {
             // Check if it's a refresh token failure or if we don't have a refresh token
             if (_refreshToken == null ||
                 e.requestOptions.path.contains('/auth/token/refresh/')) {
-              _handleLogout();
+              logout();
               return handler.next(e);
             }
 
@@ -87,7 +87,7 @@ class ApiService {
               if (newAccessToken != null) {
                 return _retry(e.requestOptions, newAccessToken, handler);
               } else {
-                _handleLogout();
+                logout();
                 return handler.next(e);
               }
             } catch (refreshError) {
@@ -98,7 +98,7 @@ class ApiService {
               _refreshCompleter.clear();
               _isRefreshing = false;
 
-              _handleLogout();
+              logout();
               return handler.next(e);
             }
           }
@@ -134,7 +134,7 @@ class ApiService {
     }
   }
 
-  Future<void> _handleLogout() async {
+  Future<void> logout() async {
     await setAuthToken(null, null);
     // Use navigatorKey to navigate to login screen
     // We assume '/login' route exists or we push LoginScreen
@@ -149,7 +149,7 @@ class ApiService {
       // NOTE: Standard Dio call here will trigger interceptors.
       // But we added logic in onRequest to SKIP Auth header for this path.
       final response = await _dio.post(
-        '/auth/token/refresh/',
+        'auth/token/refresh/',
         data: {'refresh': _refreshToken},
       );
 
@@ -193,111 +193,111 @@ class ApiService {
   Future<Response> login(String phone, String password) async {
     await setAuthToken(null, null); // Clear tokens before login
     return _dio.post(
-      '/auth/customer/login/',
+      'auth/customer/login/',
       data: {'username': phone, 'password': password},
     );
   }
 
   Future<Response> signup(Map<String, dynamic> data) async {
     await setAuthToken(null, null); // Clear tokens before signup
-    return _dio.post('/auth/customer/signup/', data: data);
+    return _dio.post('auth/customer/signup/', data: data);
   }
 
   // --- User Profile Methods ---
   Future<Response> fetchUserProfile() {
-    return _dio.get('/auth/profile/');
+    return _dio.get('auth/profile/');
   }
 
   Future<Response> updateUserProfile(Map<String, dynamic> profileData) {
-    return _dio.put('/auth/profile/update/', data: profileData);
+    return _dio.put('auth/profile/update/', data: profileData);
   }
 
   // Products
   Future<Response> getProducts(int retailerId) {
-    return _dio.get('/products/retailer/$retailerId/');
+    return _dio.get('products/retailer/$retailerId/');
   }
 
   Future<Response> getCategories() {
-    return _dio.get('/products/categories/');
+    return _dio.get('products/categories/');
   }
 
   // Cart
   Future<Response> getCart(int retailerId) {
-    return _dio.get('/cart/', queryParameters: {'retailer_id': retailerId});
+    return _dio.get('cart/', queryParameters: {'retailer_id': retailerId});
   }
 
   Future<Response> addToCart(int productId, int quantity) {
     return _dio.post(
-      '/cart/add/',
+      'cart/add/',
       data: {'product_id': productId, 'quantity': quantity},
     );
   }
 
   Future<Response> updateCartItem(int itemId, int quantity) {
-    return _dio.put('/cart/items/$itemId/', data: {'quantity': quantity});
+    return _dio.put('cart/items/$itemId/', data: {'quantity': quantity});
   }
 
   Future<Response> removeCartItem(int itemId) {
-    return _dio.delete('/cart/items/$itemId/');
+    return _dio.delete('cart/items/$itemId/remove/');
   }
 
   // Retailers
   Future<Response> getRetailers() {
-    return _dio.get('/retailers/');
+    return _dio.get('retailers/');
   }
 
   // Address
   Future<Response> getAddresses() {
-    return _dio.get('/customer/addresses/');
+    return _dio.get('customer/addresses/');
   }
 
   Future<Response> addAddress(Map<String, dynamic> addressData) {
-    return _dio.post('/customer/addresses/create/', data: addressData);
+    return _dio.post('customer/addresses/create/', data: addressData);
   }
 
   Future<Response> updateAddress(int id, Map<String, dynamic> addressData) {
-    return _dio.put('/customer/addresses/$id/update/', data: addressData);
+    return _dio.put('customer/addresses/$id/update/', data: addressData);
   }
 
   Future<Response> deleteAddress(int id) {
-    return _dio.delete('/customer/addresses/$id/delete/');
+    return _dio.delete('customer/addresses/$id/delete/');
   }
 
   // Orders
   Future<Response> placeOrder(Map<String, dynamic> orderData) {
-    return _dio.post('/orders/place/', data: orderData);
+    return _dio.post('orders/place/', data: orderData);
   }
 
   Future<Response> getOrderHistory() {
-    return _dio.get('/orders/history/');
+    return _dio.get('orders/history/');
   }
 
   Future<Response> getOrderDetail(int orderId) {
-    return _dio.get('/orders/$orderId/');
+    return _dio.get('orders/$orderId/');
   }
 
   // Verify Phone (OTP)
   Future<Response> requestPhoneVerification() {
-    return _dio.post('/auth/customer/request-verification/');
+    return _dio.post('auth/customer/request-verification/');
   }
 
   Future<Response> verifyOtp(String phone, String otp) {
     return _dio.post(
-      '/auth/customer/verify-otp/',
+      'auth/customer/verify-otp/',
       data: {'phone_number': phone, 'otp_code': otp},
     );
   }
 
   // Wishlist
   Future<Response> getWishlist() {
-    return _dio.get('/customer/wishlist/');
+    return _dio.get('customer/wishlist/');
   }
 
   Future<Response> addToWishlist(int productId) {
-    return _dio.post('/customer/wishlist/add/', data: {'product': productId});
+    return _dio.post('customer/wishlist/add/', data: {'product': productId});
   }
 
   Future<Response> removeFromWishlist(int productId) {
-    return _dio.delete('/customer/wishlist/remove/$productId/');
+    return _dio.delete('customer/wishlist/remove/$productId/');
   }
 }

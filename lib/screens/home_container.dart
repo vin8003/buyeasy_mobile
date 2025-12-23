@@ -8,6 +8,7 @@ import 'retailer_list_screen.dart';
 import '../models/retailer.dart';
 import '../models/product.dart';
 import 'product_page.dart';
+import 'order_history_screen.dart';
 
 class HomeContainer extends StatefulWidget {
   const HomeContainer({Key? key}) : super(key: key);
@@ -101,6 +102,9 @@ class _HomeContainerState extends State<HomeContainer> {
         // Handle Product Page inside nested navigator
         final product = settings.arguments as Product;
         builder = (BuildContext context) => ProductPage(product: product);
+        break;
+      case '/orders':
+        builder = (BuildContext context) => OrderHistoryScreen();
         break;
       default:
         builder = (BuildContext context) =>
