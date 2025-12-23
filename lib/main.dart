@@ -9,6 +9,7 @@ import 'screens/cart_screen.dart';
 import 'screens/wishlist_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/setting_screen.dart';
+import 'screens/order_history_screen.dart';
 import 'models/product.dart';
 
 void main() {
@@ -58,6 +59,7 @@ class MyApp extends StatelessWidget {
         '/wishlist': (context) => WishlistScreen(),
         '/profile': (context) => ProfileScreen(),
         '/settings': (context) => SettingScreen(),
+        '/orders': (context) => OrderHistoryScreen(),
       },
     );
   }

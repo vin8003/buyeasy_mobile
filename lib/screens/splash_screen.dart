@@ -24,7 +24,8 @@ class _SplashScreenState extends State<SplashScreen> {
     String? token = prefs.getString('access_token');
 
     // Initialize the ApiService with the token
-    await ApiService().setAuthToken(token);
+    // Initialize the ApiService with the token
+    await ApiService().checkAuthToken();
 
     if (!mounted) return;
 

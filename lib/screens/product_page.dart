@@ -55,6 +55,24 @@ class _ProductPageState extends State<ProductPage> {
     }
   }
 
+  Future<void> _addToWishlist() async {
+    try {
+      final response = await _apiService.addToWishlist(widget.product.id);
+      if (response.statusCode == 201) {
+        _showSnackBar('${widget.product.name} added to wishlist!');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400 &&
+          e.response?.data['error'] == 'Product already in wishlist') {
+        _showSnackBar('${widget.product.name} is already in your wishlist.');
+      } else {
+        _showSnackBar('Failed to add to wishlist', isError: true);
+      }
+    } catch (e) {
+      _showSnackBar('An unexpected error occurred.', isError: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
@@ -64,7 +82,18 @@ class _ProductPageState extends State<ProductPage> {
         : 'http://127.0.0.1:8000${widget.product.image}';
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.product.name)),
+      appBar: AppBar(
+        title: Text(widget.product.name),
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.favorite_border,
+            ), // Use border for now as we don't know state
+            tooltip: 'Add to Wishlist',
+            onPressed: _addToWishlist,
+          ),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

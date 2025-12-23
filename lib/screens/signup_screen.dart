@@ -50,19 +50,14 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      // final response = await _apiService.post(
-      //   '/auth/customer/signup/',
-      //   data: {
-      //     'username': _usernameController.text,
-      //     'email': _emailController.text,
-      //     // 'phone_number': _phoneController.text, // This field is not in the UserRegistrationSerializer yet.
-      //     'password': _passwordController.text,
-      //     'password_confirm': _confirmPasswordController.text,
-      //     'user_type': 'customer',
-      //   },
-      //   requiresAuth: false,
-      // );
-      final response = null;
+      final response = await _apiService.signup({
+        'username': _usernameController.text,
+        'email': _emailController.text,
+        'phone_number': _phoneController.text,
+        'password': _passwordController.text,
+        'password_confirm': _confirmPasswordController.text,
+        'user_type': 'customer',
+      });
 
       if (response.statusCode == 201) {
         _showSnackBar("Signup successful! Please log in.");

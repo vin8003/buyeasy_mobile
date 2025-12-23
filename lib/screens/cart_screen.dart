@@ -1,61 +1,164 @@
 // cart_screen.dart
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
-  const CartScreen({super.key});
+  final int? retailerId;
+
+  const CartScreen({super.key, this.retailerId});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
 }
 
 class _CartScreenState extends State<CartScreen> {
-  List<CartItem> cartItems = [
-    CartItem(
-      name: 'Haldiram\'s',
-      price: 60.0,
-      quantity: 1,
-      imageUrl: 'https://via.placeholder.com/150', // image url fixed
-    ),
-    CartItem(
-      name: 'Turmeric Powder',
-      price: 90.0,
-      quantity: 2,
-      imageUrl: 'https://via.placeholder.com/150',
-    ),
-    CartItem(
-      name: 'Fortune Sunlite',
-      price: 140.0,
-      quantity: 1,
-      imageUrl: 'https://via.placeholder.com/150',
-    ),
-  ];
+  bool _isLoading = true;
+  double _totalPrice = 0.0;
+  List<CartItem> cartItems = [];
 
-  double get totalPrice {
-    return cartItems.fold(0, (sum, item) => sum + item.price * item.quantity);
+  @override
+  void initState() {
+    super.initState();
+    if (widget.retailerId != null) {
+      _fetchCart();
+    } else {
+      _isLoading = false;
+    }
+  }
+
+  @override
+  void didUpdateWidget(CartScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.retailerId != oldWidget.retailerId) {
+      if (widget.retailerId != null) {
+        _fetchCart();
+      } else {
+        setState(() => cartItems = []);
+      }
+    }
+  }
+
+  Future<void> _fetchCart() async {
+    if (widget.retailerId == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final response = await ApiService().getCart(widget.retailerId!);
+      if (response.statusCode == 200) {
+        final data = response.data;
+        setState(() {
+          cartItems = (data['items'] as List).map((item) {
+            return CartItem(
+              id: item['id'],
+              productId: item['product'], // Product ID
+              name: item['product_name'],
+              price: double.parse(item['product_price'].toString()),
+              quantity: item['quantity'],
+              imageUrl: item['product_image'] != null
+                  ? (item['product_image'].toString().startsWith('http')
+                        ? item['product_image']
+                        : 'http://127.0.0.1:8000${item['product_image']}')
+                  : 'https://via.placeholder.com/150',
+            );
+          }).toList();
+          _totalPrice = double.parse(
+            data['total_amount'].toString(),
+          ); // Use total_amount from serializer
+        });
+      }
+    } catch (e) {
+      print("Error fetching cart: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load cart')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updateQuantity(int index, int quantity) async {
+    // Optimistic update
+    final item = cartItems[index];
+    final oldQuantity = item.quantity;
+
+    setState(() {
+      item.quantity = quantity;
+    });
+
+    try {
+      await ApiService().updateCartItem(item.id, quantity);
+      _fetchCart(); // Refresh cart to get updated total price
+    } catch (e) {
+      // Revert on error
+      setState(() {
+        item.quantity = oldQuantity;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update quantity: $e')));
+    }
   }
 
   void incrementQty(int index) {
-    setState(() {
-      cartItems[index].quantity++;
-    });
+    _updateQuantity(index, cartItems[index].quantity + 1);
   }
 
   void decrementQty(int index) {
-    setState(() {
-      if (cartItems[index].quantity > 1) {
-        cartItems[index].quantity--;
-      }
-    });
+    if (cartItems[index].quantity > 1) {
+      _updateQuantity(index, cartItems[index].quantity - 1);
+    }
   }
 
-  void removeItem(int index) {
+  Future<void> removeItem(int index) async {
+    final item = cartItems[index];
     setState(() {
       cartItems.removeAt(index);
     });
+
+    try {
+      await ApiService().removeCartItem(item.id);
+      _fetchCart();
+    } catch (e) {
+      _fetchCart(); // Refresh to restore state on error
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to remove item')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.retailerId == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('My Cart')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.store_mall_directory,
+                size: 64,
+                color: Colors.grey,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Please select a retailer to view cart',
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('My Cart')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('My Cart')),
       body: Column(
@@ -168,7 +271,7 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                     Text(
-                      '₹${totalPrice.toStringAsFixed(2)}',
+                      '₹${_totalPrice.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -189,8 +292,15 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Checkout Clicked')),
+                      if (cartItems.isEmpty) return;
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CheckoutScreen(
+                            totalAmount: _totalPrice,
+                            retailerId: widget.retailerId!,
+                          ),
+                        ),
                       );
                     },
                     child: const Text(
@@ -209,12 +319,16 @@ class _CartScreenState extends State<CartScreen> {
 }
 
 class CartItem {
+  int id;
+  int productId;
   String name;
   double price;
   int quantity;
   String imageUrl;
 
   CartItem({
+    required this.id,
+    required this.productId,
     required this.name,
     required this.price,
     required this.quantity,

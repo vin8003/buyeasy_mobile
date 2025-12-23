@@ -9,6 +9,7 @@ class Product {
   final double mrp; // Field name from API is 'original_price'
   final double discountPercent; // Field name from API is 'discount_percentage'
   final String unit; // Field name from API
+  final String categoryName;
 
   Product({
     required this.id,
@@ -19,6 +20,7 @@ class Product {
     required this.mrp,
     required this.discountPercent,
     required this.unit,
+    required this.categoryName,
   });
 
   // A factory constructor to safely create a Product from JSON data
@@ -44,6 +46,7 @@ class Product {
       discountPercent: safeParseDouble(json['discount_percentage']),
       image: json['image'] ?? '', // This should be the main image URL
       unit: json['unit'] ?? 'piece',
+      categoryName: json['category_name'] ?? '',
     );
   }
 

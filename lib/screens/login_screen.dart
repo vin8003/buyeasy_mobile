@@ -45,7 +45,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.statusCode == 200) {
         final data = response.data;
-        await _apiService.setAuthToken(data['access_token']);
+        await _apiService.setAuthToken(
+          data['tokens']['access'],
+          data['tokens']['refresh'],
+        );
         _showSnackBar("Login Successful!");
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => HomeContainer()),

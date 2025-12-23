@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:dio/dio.dart';
-import '../services/api_service.dart'; // Ensure this path is correct
+import '../services/api_service.dart';
+import 'address_list_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -131,73 +132,104 @@ class _ProfileScreenState extends State<ProfileScreen> {
             )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    TextFormField(
-                      controller: _firstNameController,
-                      decoration: InputDecoration(labelText: 'First Name'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your first name';
-                        }
-                        return null;
-                      },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Profile Edit Form
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        TextFormField(
+                          controller: _firstNameController,
+                          decoration: InputDecoration(labelText: 'First Name'),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your first name';
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        TextFormField(
+                          controller: _lastNameController,
+                          decoration: InputDecoration(labelText: 'Last Name'),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your last name';
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: InputDecoration(labelText: 'Email'),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!RegExp(
+                              r'^[^@]+@[^@]+\.[^@]+',
+                            ).hasMatch(value)) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: 16),
+                        TextFormField(
+                          controller: _phoneNumberController,
+                          decoration: InputDecoration(
+                            labelText: 'Phone Number',
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                          ),
+                          readOnly: true,
+                        ),
+                        SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _saveProfile,
+                          child: _isLoading
+                              ? SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text('Save Profile'),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _lastNameController,
-                      decoration: InputDecoration(labelText: 'Last Name'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your last name';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    TextFormField(
-                      controller: _phoneNumberController,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number',
-                        filled: true,
-                        fillColor: Colors.grey[200],
-                      ),
-                      readOnly: true, // Phone number is usually not editable
-                    ),
-                    SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _saveProfile,
-                      child: _isLoading
-                          ? SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text('Save Profile'),
-                    ),
-                  ],
-                ),
+                  ),
+                  const Divider(height: 48),
+                  // Navigation Options
+                  ListTile(
+                    leading: const Icon(Icons.location_on),
+                    title: const Text('My Addresses'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AddressListScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.history),
+                    title: const Text('Order History'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/orders');
+                    },
+                  ),
+                ],
               ),
             ),
     );

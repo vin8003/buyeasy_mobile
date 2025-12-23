@@ -1,0 +1,300 @@
+import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import '../services/api_service.dart';
+import '../models/address.dart';
+import 'address_list_screen.dart';
+import 'phone_verification_screen.dart';
+
+class CheckoutScreen extends StatefulWidget {
+  final double totalAmount;
+  final int retailerId;
+
+  const CheckoutScreen({
+    Key? key,
+    required this.totalAmount,
+    required this.retailerId,
+  }) : super(key: key);
+
+  @override
+  _CheckoutScreenState createState() => _CheckoutScreenState();
+}
+
+class _CheckoutScreenState extends State<CheckoutScreen> {
+  final ApiService _apiService = ApiService();
+  Address? _selectedAddress;
+  String _paymentMode = 'cash'; // Default to cash for now
+  String _deliveryMode = 'delivery';
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Checkout')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Delivery Address Section
+            const Text(
+              'Delivery Address',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: ListTile(
+                title: Text(
+                  _selectedAddress != null
+                      ? _selectedAddress!.title
+                      : 'Select Address',
+                ),
+                subtitle: _selectedAddress != null
+                    ? Text(
+                        '${_selectedAddress!.addressLine1}, ${_selectedAddress!.city} - ${_selectedAddress!.pincode}',
+                      )
+                    : const Text('Please select a delivery address'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _selectAddress,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Delivery Mode
+            const Text(
+              'Delivery Mode',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            RadioListTile<String>(
+              title: const Text('Home Delivery'),
+              value: 'delivery',
+              groupValue: _deliveryMode,
+              onChanged: (value) => setState(() {
+                _deliveryMode = value!;
+                if (value == 'delivery')
+                  _paymentMode = 'cash';
+                else
+                  _paymentMode = 'cash_pickup';
+              }),
+            ),
+            RadioListTile<String>(
+              title: const Text('Store Pickup'),
+              value: 'pickup',
+              groupValue: _deliveryMode,
+              onChanged: (value) => setState(() {
+                _deliveryMode = value!;
+                if (value == 'pickup')
+                  _paymentMode = 'cash_pickup';
+                else
+                  _paymentMode = 'cash';
+              }),
+            ),
+            const SizedBox(height: 24),
+
+            // Payment Mode
+            const Text(
+              'Payment Method',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            RadioListTile<String>(
+              title: const Text('Cash on Delivery / Pay at Store'),
+              value: _deliveryMode == 'delivery' ? 'cash' : 'cash_pickup',
+              groupValue: _paymentMode,
+              onChanged: (value) => setState(() => _paymentMode = value!),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Order Summary
+            const Text(
+              'Order Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Subtotal', style: TextStyle(fontSize: 16)),
+                Text(
+                  '₹${widget.totalAmount}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            // Add Delivery Fee logic here if needed (e.g. +50)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Delivery Fee', style: TextStyle(fontSize: 16)),
+                Text(
+                  _deliveryMode == 'delivery' ? '₹50.0' : '₹0.0',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Total',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '₹${widget.totalAmount + (_deliveryMode == 'delivery' ? 50 : 0)}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: _isLoading ? null : _placeOrder,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Place Order', style: TextStyle(fontSize: 18)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectAddress() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddressListScreen(selectMode: true),
+      ),
+    );
+
+    if (result != null && result is Address) {
+      setState(() {
+        _selectedAddress = result;
+      });
+    }
+  }
+
+  Future<void> _placeOrder() async {
+    if (_deliveryMode == 'delivery' && _selectedAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a delivery address')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final orderData = {
+      "retailer_id": widget.retailerId,
+      "address_id": _selectedAddress?.id,
+      "delivery_mode": _deliveryMode,
+      "payment_mode": _paymentMode,
+    };
+
+    try {
+      final response = await _apiService.placeOrder(orderData);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Success
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order placed successfully!')),
+        );
+        // Navigate to Order History or Home and clear navigation stack
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/home', (route) => false);
+      }
+    } on DioException catch (e) {
+      String errorMessage = 'Failed to place order';
+      bool isPhoneVerificationError = false;
+
+      if (e.response != null && e.response!.data != null) {
+        if (e.response!.data is Map && e.response!.data.containsKey('error')) {
+          errorMessage = e.response!.data['error'];
+          if (errorMessage.contains('verify your phone number')) {
+            isPhoneVerificationError = true;
+          }
+        } else if (e.response!.data is Map &&
+            e.response!.data.containsKey('detail')) {
+          errorMessage = e.response!.data['detail'];
+        }
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+
+      if (isPhoneVerificationError) {
+        _showVerificationDialog();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('An unexpected error occurred: ${e.toString()}'),
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showVerificationDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Phone Verification Required'),
+        content: const Text(
+          'Your phone number needs to be verified before placing an order. Would you like to verify it now?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _initiateVerification();
+            },
+            child: const Text('Verify Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _initiateVerification() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _apiService.requestPhoneVerification();
+      if (response.statusCode == 200) {
+        final phoneNumber = response.data['phone_number'];
+        if (phoneNumber != null) {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  PhoneVerificationScreen(phoneNumber: phoneNumber),
+            ),
+          );
+
+          if (result == true) {
+            // Retry placing order or just stay on screen
+            // _placeOrder(); // Optional: Auto-retry
+          }
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to initiate verification: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+}
