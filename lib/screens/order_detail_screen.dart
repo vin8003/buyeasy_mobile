@@ -5,7 +5,7 @@ import '../services/api_service.dart';
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
 
-  const OrderDetailScreen({Key? key, required this.orderId}) : super(key: key);
+  const OrderDetailScreen({super.key, required this.orderId});
 
   @override
   _OrderDetailScreenState createState() => _OrderDetailScreenState();

@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 import 'order_detail_screen.dart';
 
 class OrderHistoryScreen extends StatefulWidget {
-  const OrderHistoryScreen({Key? key}) : super(key: key);
+  const OrderHistoryScreen({super.key});
 
   @override
   _OrderHistoryScreenState createState() => _OrderHistoryScreenState();

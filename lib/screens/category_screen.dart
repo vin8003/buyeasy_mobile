@@ -5,7 +5,7 @@ import 'category_products_screen.dart';
 
 class CategoryScreen extends StatefulWidget {
   final int? retailerId;
-  const CategoryScreen({Key? key, this.retailerId}) : super(key: key);
+  const CategoryScreen({super.key, this.retailerId});
 
   @override
   _CategoryScreenState createState() => _CategoryScreenState();
@@ -168,8 +168,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
     name = name.toLowerCase();
     if (name.contains('fruit') || name.contains('vegetable')) return Icons.eco;
     if (name.contains('dairy') || name.contains('milk')) return Icons.egg;
-    if (name.contains('beverage') || name.contains('drink'))
+    if (name.contains('beverage') || name.contains('drink')) {
       return Icons.local_drink;
+    }
     if (name.contains('snack')) return Icons.fastfood;
     if (name.contains('bakery')) return Icons.bakery_dining;
     if (name.contains('meat')) return Icons.set_meal;

@@ -5,7 +5,7 @@ import '../models/address.dart';
 class AddEditAddressScreen extends StatefulWidget {
   final Address? address;
 
-  const AddEditAddressScreen({Key? key, this.address}) : super(key: key);
+  const AddEditAddressScreen({super.key, this.address});
 
   @override
   _AddEditAddressScreenState createState() => _AddEditAddressScreenState();
@@ -108,7 +108,7 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                     value!.isEmpty ? 'Please enter a title' : null,
               ),
               DropdownButtonFormField<String>(
-                value: _addressType,
+                initialValue: _addressType,
                 decoration: const InputDecoration(labelText: 'Address Type'),
                 items: ['home', 'office', 'other'].map((String value) {
                   return DropdownMenuItem<String>(

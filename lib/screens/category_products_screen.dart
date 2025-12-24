@@ -10,10 +10,10 @@ class CategoryProductsScreen extends StatefulWidget {
   final int? retailerId;
 
   const CategoryProductsScreen({
-    Key? key,
+    super.key,
     required this.categoryName,
     this.retailerId,
-  }) : super(key: key);
+  });
 
   @override
   _CategoryProductsScreenState createState() => _CategoryProductsScreenState();

@@ -5,8 +5,7 @@ import '../models/retailer.dart';
 class RetailerListScreen extends StatefulWidget {
   final Function(Retailer) onRetailerSelected;
 
-  const RetailerListScreen({Key? key, required this.onRetailerSelected})
-    : super(key: key);
+  const RetailerListScreen({super.key, required this.onRetailerSelected});
 
   @override
   _RetailerListScreenState createState() => _RetailerListScreenState();

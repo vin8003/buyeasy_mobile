@@ -8,10 +8,10 @@ class ProductCard extends StatefulWidget {
   final bool isWishlisted;
 
   const ProductCard({
-    Key? key,
+    super.key,
     required this.product,
     this.isWishlisted = false,
-  }) : super(key: key);
+  });
 
   @override
   State<ProductCard> createState() => _ProductCardState();

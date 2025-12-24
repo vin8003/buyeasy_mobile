@@ -13,10 +13,10 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback onChangeRetailer;
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.retailer,
     required this.onChangeRetailer,
-  }) : super(key: key);
+  });
 
   @override
   _HomeScreenState createState() => _HomeScreenState();

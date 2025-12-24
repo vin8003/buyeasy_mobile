@@ -6,8 +6,7 @@ import 'package:dio/dio.dart';
 class PhoneVerificationScreen extends StatefulWidget {
   final String phoneNumber;
 
-  const PhoneVerificationScreen({Key? key, required this.phoneNumber})
-    : super(key: key);
+  const PhoneVerificationScreen({super.key, required this.phoneNumber});
 
   @override
   _PhoneVerificationScreenState createState() =>

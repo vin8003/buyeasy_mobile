@@ -5,6 +5,8 @@ import '../services/api_service.dart';
 import 'address_list_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
 }

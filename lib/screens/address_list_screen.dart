@@ -6,8 +6,7 @@ import 'add_edit_address_screen.dart';
 class AddressListScreen extends StatefulWidget {
   final bool selectMode;
 
-  const AddressListScreen({Key? key, this.selectMode = false})
-    : super(key: key);
+  const AddressListScreen({super.key, this.selectMode = false});
 
   @override
   _AddressListScreenState createState() => _AddressListScreenState();

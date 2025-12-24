@@ -8,7 +8,7 @@ class SettingScreen extends StatefulWidget {
 }
 
 class _SettingScreenState extends State<SettingScreen> {
-  int _selectedIndex = 4;
+  final int _selectedIndex = 4;
 
   void _onItemTapped(int index) {
     switch (index) {

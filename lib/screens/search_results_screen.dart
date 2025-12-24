@@ -9,10 +9,10 @@ class SearchResultsScreen extends StatefulWidget {
   final List<Product> searchResults;
 
   const SearchResultsScreen({
-    Key? key,
+    super.key,
     required this.query,
     required this.searchResults,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchResultsScreen> createState() => _SearchResultsScreenState();

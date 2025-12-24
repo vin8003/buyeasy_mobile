@@ -4,7 +4,7 @@ import '../models/wishlist_item.dart';
 import 'package:dio/dio.dart';
 
 class WishlistScreen extends StatefulWidget {
-  const WishlistScreen({Key? key}) : super(key: key);
+  const WishlistScreen({super.key});
 
   @override
   _WishlistScreenState createState() => _WishlistScreenState();

@@ -10,10 +10,10 @@ class CheckoutScreen extends StatefulWidget {
   final int retailerId;
 
   const CheckoutScreen({
-    Key? key,
+    super.key,
     required this.totalAmount,
     required this.retailerId,
-  }) : super(key: key);
+  });
 
   @override
   _CheckoutScreenState createState() => _CheckoutScreenState();
@@ -70,10 +70,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               groupValue: _deliveryMode,
               onChanged: (value) => setState(() {
                 _deliveryMode = value!;
-                if (value == 'delivery')
+                if (value == 'delivery') {
                   _paymentMode = 'cash';
-                else
+                } else {
                   _paymentMode = 'cash_pickup';
+                }
               }),
             ),
             RadioListTile<String>(
@@ -82,10 +83,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               groupValue: _deliveryMode,
               onChanged: (value) => setState(() {
                 _deliveryMode = value!;
-                if (value == 'pickup')
+                if (value == 'pickup') {
                   _paymentMode = 'cash_pickup';
-                else
+                } else {
                   _paymentMode = 'cash';
+                }
               }),
             ),
             const SizedBox(height: 24),
