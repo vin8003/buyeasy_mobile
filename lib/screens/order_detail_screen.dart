@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
@@ -17,17 +18,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Map<String, dynamic>? _order;
   bool _isLoading = true;
   Timer? _pollingTimer;
+  StreamSubscription? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetchOrderDetail();
     _startPolling();
+    _listenForRefreshNotifications();
+  }
+
+  void _listenForRefreshNotifications() {
+    _notificationSubscription = NotificationService().updateStream.listen((
+      data,
+    ) {
+      if (data['event'] == 'order_refresh' &&
+          data['order_id'] == widget.orderId.toString()) {
+        if (mounted) {
+          _fetchOrderDetail();
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _notificationSubscription?.cancel();
     super.dispose();
   }
 

@@ -13,9 +13,25 @@ import 'screens/order_history_screen.dart';
 import 'models/product.dart';
 import 'services/api_service.dart';
 import 'screens/order_detail_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'services/notification_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    // Note: This will fail if google-services.json is missing
+    await Firebase.initializeApp();
+    await NotificationService().initialize();
+    debugPrint('Firebase/Notifications initialized successfully');
+  } catch (e) {
+    debugPrint('------------------------------------------------');
+    debugPrint('FIREBASE ALERT: Initialization failed.');
+    debugPrint('Check if google-services.json is in android/app/');
+    debugPrint('Error: $e');
+    debugPrint('------------------------------------------------');
+  }
+
   runApp(const MyApp());
 }
 

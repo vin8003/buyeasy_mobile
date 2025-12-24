@@ -152,6 +152,28 @@ class ApiService {
     );
   }
 
+  Future<void> registerDeviceToken(String token) async {
+    try {
+      await _dio.post(
+        'auth/device/register/',
+        data: {
+          'registration_id': token,
+          'type': defaultTargetPlatform == TargetPlatform.iOS
+              ? 'ios'
+              : 'android',
+          'name': 'mobile_app',
+        },
+      );
+      if (kDebugMode) {
+        print('FCM Token registered successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Failed to register FCM token: $e');
+      }
+    }
+  }
+
   Future<String?> _refreshTokenAndGetNew() async {
     try {
       // NOTE: Standard Dio call here will trigger interceptors.

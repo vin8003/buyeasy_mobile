@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'signup_screen.dart';
 import 'home_container.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -50,6 +51,17 @@ class _LoginScreenState extends State<LoginScreen> {
           data['tokens']['access'],
           data['tokens']['refresh'],
         );
+
+        // Register FCM device token
+        try {
+          final fcmToken = await NotificationService().getToken();
+          if (fcmToken != null) {
+            await _apiService.registerDeviceToken(fcmToken);
+          }
+        } catch (e) {
+          debugPrint('FCM Token registration failed: $e');
+        }
+
         _showSnackBar("Login Successful!");
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => HomeContainer()),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "266120844334",
+    "project_id": "buyeasy-4003f",
+    "storage_bucket": "buyeasy-4003f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:266120844334:android:46db60c73ec214579ebbbf",
+        "android_client_info": {
+          "package_name": "com.example.shop_easyy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHEco_sMWtz-twR8Bu1rLRCYG58q7EJ8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
