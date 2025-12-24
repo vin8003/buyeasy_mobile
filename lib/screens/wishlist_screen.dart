@@ -57,6 +57,21 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
+  Future<void> _addToCart(WishlistItem item) async {
+    try {
+      final response = await _apiService.addToCart(item.productId, 1);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Added to cart')));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to add to cart: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,9 +111,21 @@ class _WishlistScreenState extends State<WishlistScreen> {
                         ),
                       ],
                     ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _removeFromWishlist(item),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.shopping_cart,
+                            color: Colors.green,
+                          ),
+                          onPressed: () => _addToCart(item),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _removeFromWishlist(item),
+                        ),
+                      ],
                     ),
                     onTap: () {
                       // Navigate to product detail if possible.

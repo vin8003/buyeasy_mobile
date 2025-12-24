@@ -27,6 +27,36 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _fetchAddresses();
+  }
+
+  Future<void> _fetchAddresses() async {
+    try {
+      final response = await _apiService.getAddresses();
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data;
+        if (data.isNotEmpty) {
+          final addresses = data.map((json) => Address.fromJson(json)).toList();
+
+          // Find default address
+          final defaultAddress = addresses.firstWhere(
+            (addr) => addr.isDefault,
+            orElse: () => addresses.first,
+          );
+
+          setState(() {
+            _selectedAddress = defaultAddress;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching addresses: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),

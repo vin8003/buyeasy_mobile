@@ -17,14 +17,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final ApiService _apiService = ApiService();
   Map<String, dynamic>? _order;
   bool _isLoading = true;
-  Timer? _pollingTimer;
   StreamSubscription? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetchOrderDetail();
-    _startPolling();
     _listenForRefreshNotifications();
   }
 
@@ -43,47 +41,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
     _notificationSubscription?.cancel();
     super.dispose();
-  }
-
-  void _startPolling() {
-    // Poll every 5 seconds
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (mounted) {
-        _checkUpdates();
-      }
-    });
-  }
-
-  Future<void> _checkUpdates() async {
-    if (_order == null) return;
-    try {
-      final lastUpdated = _order!['updated_at'];
-      final response = await _apiService.getOrderDetail(
-        widget.orderId,
-        lastUpdated: lastUpdated,
-      );
-
-      if (response.statusCode == 200) {
-        // Data changed, update silently
-        if (mounted) {
-          setState(() {
-            _order = response.data;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Order details updated'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-      // 304 means no change, ignore
-    } catch (e) {
-      debugPrint('Polling error: $e');
-    }
   }
 
   Future<void> _fetchOrderDetail() async {
