@@ -123,6 +123,23 @@ class _ProductPageState extends State<ProductPage> {
                       color: Theme.of(context).primaryColor,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  if (widget.product.stockQuantity > 0)
+                    Text(
+                      'In Stock (${widget.product.stockQuantity} ${widget.product.unit}s available)',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  else
+                    const Text(
+                      'Out of Stock',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   Text(
                     'Description',
@@ -141,8 +158,13 @@ class _ProductPageState extends State<ProductPage> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ElevatedButton(
-          onPressed: _isAddingToCart ? null : _addToCart,
+          onPressed: (_isAddingToCart || widget.product.stockQuantity <= 0)
+              ? null
+              : _addToCart,
           style: ElevatedButton.styleFrom(
+            backgroundColor: widget.product.stockQuantity <= 0
+                ? Colors.grey
+                : null,
             padding: const EdgeInsets.symmetric(vertical: 16),
             textStyle: const TextStyle(fontSize: 18),
           ),
@@ -155,7 +177,11 @@ class _ProductPageState extends State<ProductPage> {
                     strokeWidth: 2,
                   ),
                 )
-              : const Text('Add to Cart'),
+              : Text(
+                  widget.product.stockQuantity <= 0
+                      ? 'Out of Stock'
+                      : 'Add to Cart',
+                ),
         ),
       ),
     );

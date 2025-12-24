@@ -280,8 +280,22 @@ class ApiService {
     return _dio.get('orders/history/');
   }
 
-  Future<Response> getOrderDetail(int orderId) {
-    return _dio.get('orders/$orderId/');
+  Future<Response> getOrderDetail(int orderId, {String? lastUpdated}) {
+    final queryParameters = <String, dynamic>{};
+    if (lastUpdated != null) {
+      queryParameters['last_updated'] = lastUpdated;
+    }
+
+    return _dio.get(
+      'orders/$orderId/',
+      queryParameters: queryParameters,
+      options: Options(
+        validateStatus: (status) {
+          return status != null &&
+              (status >= 200 && status < 300 || status == 304);
+        },
+      ),
+    );
   }
 
   // Verify Phone (OTP)
@@ -307,5 +321,12 @@ class ApiService {
 
   Future<Response> removeFromWishlist(int productId) {
     return _dio.delete('customer/wishlist/remove/$productId/');
+  }
+
+  Future<Response> confirmOrderModification(int orderId, String action) {
+    return _dio.post(
+      'orders/$orderId/confirm-modification/',
+      data: {'action': action},
+    );
   }
 }

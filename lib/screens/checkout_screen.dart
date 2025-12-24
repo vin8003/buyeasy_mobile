@@ -206,10 +206,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Order placed successfully!')),
         );
-        // Navigate to Order History or Home and clear navigation stack
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/home', (route) => false);
+
+        final orderId = response.data['id'];
+
+        // Navigate to Order Details and clear navigation stack until home
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        Navigator.of(context).pushNamed('/order-detail', arguments: orderId);
       }
     } on DioException catch (e) {
       String errorMessage = 'Failed to place order';

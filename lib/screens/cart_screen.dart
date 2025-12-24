@@ -1,5 +1,6 @@
 // cart_screen.dart
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../services/api_service.dart';
 import 'checkout_screen.dart';
 
@@ -72,6 +73,9 @@ class _CartScreenState extends State<CartScreen> {
               price: double.parse(item['product_price'].toString()),
               quantity: item['quantity'],
               imageUrl: ApiService().formatImageUrl(item['product_image']),
+              stockQuantity: item['stock_quantity'] ?? 0,
+              minOrderQuantity: item['minimum_order_quantity'] ?? 1,
+              maxOrderQuantity: item['maximum_order_quantity'],
             );
           }).toList();
           _totalPrice = double.parse(
@@ -90,8 +94,33 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _updateQuantity(int index, int quantity) async {
-    // Optimistic update
     final item = cartItems[index];
+
+    // Check availability locally before sending
+    if (quantity > item.stockQuantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Only ${item.stockQuantity} items in stock')),
+      );
+      return;
+    }
+    if (item.maxOrderQuantity != null && quantity > item.maxOrderQuantity!) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Maximum order quantity is ${item.maxOrderQuantity}'),
+        ),
+      );
+      return;
+    }
+    if (quantity < item.minOrderQuantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Minimum order quantity is ${item.minOrderQuantity}'),
+        ),
+      );
+      return;
+    }
+
+    // Optimistic update
     final oldQuantity = item.quantity;
 
     setState(() {
@@ -106,9 +135,26 @@ class _CartScreenState extends State<CartScreen> {
       setState(() {
         item.quantity = oldQuantity;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to update quantity: $e')));
+
+      String errorMessage = 'Failed to update quantity';
+      if (e is DioException && e.response?.data != null) {
+        if (e.response?.data is Map) {
+          final errorData = e.response?.data as Map;
+          if (errorData.containsKey('non_field_errors')) {
+            errorMessage = errorData['non_field_errors'][0];
+          } else if (errorData.containsKey('quantity')) {
+            errorMessage = errorData['quantity'] is List
+                ? errorData['quantity'][0]
+                : errorData['quantity'].toString();
+          } else if (errorData.containsKey('error')) {
+            errorMessage = errorData['error'];
+          }
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -117,7 +163,7 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void decrementQty(int index) {
-    if (cartItems[index].quantity > 1) {
+    if (cartItems[index].quantity > cartItems[index].minOrderQuantity) {
       _updateQuantity(index, cartItems[index].quantity - 1);
     } else {
       removeItem(index);
@@ -294,6 +340,18 @@ class _CartScreenState extends State<CartScreen> {
                                   color: Colors.black87,
                                 ),
                               ),
+                              if (item.stockQuantity <= 5)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Only ${item.stockQuantity} left',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               const SizedBox(height: 10),
                               Row(
                                 children: [
@@ -308,8 +366,23 @@ class _CartScreenState extends State<CartScreen> {
                                     style: const TextStyle(fontSize: 16),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.add_circle_outline),
-                                    onPressed: () => incrementQty(index),
+                                    icon: Icon(
+                                      Icons.add_circle_outline,
+                                      color:
+                                          (item.quantity < item.stockQuantity &&
+                                              (item.maxOrderQuantity == null ||
+                                                  item.quantity <
+                                                      item.maxOrderQuantity!))
+                                          ? null
+                                          : Colors.grey,
+                                    ),
+                                    onPressed:
+                                        (item.quantity < item.stockQuantity &&
+                                            (item.maxOrderQuantity == null ||
+                                                item.quantity <
+                                                    item.maxOrderQuantity!))
+                                        ? () => incrementQty(index)
+                                        : null,
                                   ),
                                 ],
                               ),
@@ -416,6 +489,9 @@ class CartItem {
   double price;
   int quantity;
   String imageUrl;
+  int stockQuantity;
+  int minOrderQuantity;
+  int? maxOrderQuantity;
 
   CartItem({
     required this.id,
@@ -424,5 +500,8 @@ class CartItem {
     required this.price,
     required this.quantity,
     required this.imageUrl,
+    required this.stockQuantity,
+    this.minOrderQuantity = 1,
+    this.maxOrderQuantity,
   });
 }

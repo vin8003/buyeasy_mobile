@@ -12,6 +12,7 @@ import 'screens/setting_screen.dart';
 import 'screens/order_history_screen.dart';
 import 'models/product.dart';
 import 'services/api_service.dart';
+import 'screens/order_detail_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +63,16 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => ProfileScreen(),
         '/settings': (context) => SettingScreen(),
         '/orders': (context) => OrderHistoryScreen(),
+        '/order-detail': (context) {
+          final orderId = ModalRoute.of(context)?.settings.arguments as int?;
+          if (orderId != null) {
+            return OrderDetailScreen(orderId: orderId);
+          }
+          return Scaffold(
+            appBar: AppBar(title: const Text("Error")),
+            body: const Center(child: Text("Order ID not found.")),
+          );
+        },
       },
     );
   }

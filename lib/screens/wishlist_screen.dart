@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/wishlist_item.dart';
-import 'package:dio/dio.dart';
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});

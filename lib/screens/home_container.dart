@@ -9,6 +9,7 @@ import '../models/retailer.dart';
 import '../models/product.dart';
 import 'product_page.dart';
 import 'order_history_screen.dart';
+import 'order_detail_screen.dart';
 
 class HomeContainer extends StatefulWidget {
   const HomeContainer({super.key});
@@ -105,6 +106,16 @@ class _HomeContainerState extends State<HomeContainer> {
         break;
       case '/orders':
         builder = (BuildContext context) => OrderHistoryScreen();
+        break;
+      case '/order-detail':
+        final orderId = settings.arguments as int?;
+        if (orderId != null) {
+          builder = (BuildContext context) =>
+              OrderDetailScreen(orderId: orderId);
+        } else {
+          builder = (BuildContext context) =>
+              const Scaffold(body: Center(child: Text('Order ID not found.')));
+        }
         break;
       default:
         builder = (BuildContext context) =>

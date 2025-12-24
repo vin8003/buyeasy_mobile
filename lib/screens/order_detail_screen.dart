@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
@@ -15,11 +16,57 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final ApiService _apiService = ApiService();
   Map<String, dynamic>? _order;
   bool _isLoading = true;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchOrderDetail();
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    // Poll every 5 seconds
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (mounted) {
+        _checkUpdates();
+      }
+    });
+  }
+
+  Future<void> _checkUpdates() async {
+    if (_order == null) return;
+    try {
+      final lastUpdated = _order!['updated_at'];
+      final response = await _apiService.getOrderDetail(
+        widget.orderId,
+        lastUpdated: lastUpdated,
+      );
+
+      if (response.statusCode == 200) {
+        // Data changed, update silently
+        if (mounted) {
+          setState(() {
+            _order = response.data;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Order details updated'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+      // 304 means no change, ignore
+    } catch (e) {
+      debugPrint('Polling error: $e');
+    }
   }
 
   Future<void> _fetchOrderDetail() async {
@@ -32,11 +79,36 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load order details: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load order details: $e')),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _respondToModification(String action) async {
+    try {
+      final response = await _apiService.confirmOrderModification(
+        widget.orderId,
+        action,
+      );
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Order modification ${action}ed')),
+        );
+        _fetchOrderDetail();
+      } else {
+        throw Exception('Failed to update');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -50,6 +122,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return Colors.blue;
       case 'confirmed':
         return Colors.orange;
+      case 'waiting_for_customer_approval':
+        return Colors.purple;
       default:
         return Colors.grey;
     }
@@ -84,6 +158,60 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_order!['status'] == 'waiting_for_customer_approval') ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Price/Items Updated by Retailer',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.purple,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'The retailer has modified this order. Please review the new prices and items below. Accept to proceed or Reject to cancel the order.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _respondToModification('reject'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                            ),
+                            child: const Text('Reject'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _respondToModification('accept'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.purple,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Accept'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // Status Card
             Card(
               elevation: 2,

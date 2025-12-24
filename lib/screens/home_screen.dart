@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../models/product.dart';
 import '../widgets/product_card.dart';
-import 'product_page.dart';
 import '../services/api_service.dart';
 import '../models/retailer.dart';
 import '../models/category.dart';
