@@ -9,6 +9,8 @@ class Address {
   final String state;
   final String pincode;
   final bool isDefault;
+  final double? latitude;
+  final double? longitude;
 
   Address({
     this.id,
@@ -21,6 +23,8 @@ class Address {
     required this.state,
     required this.pincode,
     this.isDefault = false,
+    this.latitude,
+    this.longitude,
   });
 
   factory Address.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,12 @@ class Address {
       state: json['state'] ?? '',
       pincode: json['pincode'] ?? '',
       isDefault: json['is_default'] ?? false,
+      latitude: json['latitude'] != null
+          ? double.parse(json['latitude'].toString())
+          : null,
+      longitude: json['longitude'] != null
+          ? double.parse(json['longitude'].toString())
+          : null,
     );
   }
 
@@ -49,6 +59,8 @@ class Address {
       'state': state,
       'pincode': pincode,
       'is_default': isDefault,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 }

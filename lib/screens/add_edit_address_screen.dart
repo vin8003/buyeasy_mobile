@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/address.dart';
+import 'location_picker_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class AddEditAddressScreen extends StatefulWidget {
   final Address? address;
@@ -24,6 +26,8 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
   late TextEditingController _pincodeController;
   String _addressType = 'home';
   bool _isDefault = false;
+  double? _latitude;
+  double? _longitude;
 
   @override
   void initState() {
@@ -42,6 +46,8 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
     );
     _addressType = widget.address?.addressType ?? 'home';
     _isDefault = widget.address?.isDefault ?? false;
+    _latitude = widget.address?.latitude;
+    _longitude = widget.address?.longitude;
   }
 
   @override
@@ -68,6 +74,12 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
         'state': _stateController.text,
         'pincode': _pincodeController.text,
         'is_default': _isDefault,
+        'latitude': _latitude != null
+            ? double.parse(_latitude!.toStringAsFixed(8))
+            : null,
+        'longitude': _longitude != null
+            ? double.parse(_longitude!.toStringAsFixed(8))
+            : null,
       };
 
       try {
@@ -163,6 +175,36 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
                 onChanged: (bool? value) {
                   setState(() => _isDefault = value!);
                 },
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final LatLng? result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LocationPickerScreen(
+                        initialLocation: _latitude != null && _longitude != null
+                            ? LatLng(_latitude!, _longitude!)
+                            : null,
+                      ),
+                    ),
+                  );
+                  if (result != null) {
+                    setState(() {
+                      _latitude = result.latitude;
+                      _longitude = result.longitude;
+                    });
+                  }
+                },
+                icon: const Icon(Icons.map),
+                label: Text(
+                  _latitude != null
+                      ? 'Location Selected (${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)})'
+                      : 'Select Location from Map',
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
