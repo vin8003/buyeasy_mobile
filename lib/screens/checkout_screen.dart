@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../services/api_service.dart';
 import '../models/address.dart';
+import '../models/reward_configuration.dart';
 import 'address_list_screen.dart';
 import 'phone_verification_screen.dart';
 
@@ -26,10 +27,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String _deliveryMode = 'delivery';
   bool _isLoading = false;
 
+  // Rewards
+  bool _useRewardPoints = false;
+  RewardConfiguration? _rewardConfig;
+  double _userRewardPoints = 0.0;
+  double _discountFromPoints = 0.0;
+
   @override
   void initState() {
     super.initState();
     _fetchAddresses();
+    _fetchRewardData();
   }
 
   Future<void> _fetchAddresses() async {
@@ -54,6 +62,73 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } catch (e) {
       debugPrint('Error fetching addresses: $e');
     }
+  }
+
+  Future<void> _fetchRewardData() async {
+    try {
+      // Fetch config
+      final configResponse = await _apiService.fetchRewardConfiguration(
+        widget.retailerId,
+      );
+      if (configResponse.statusCode == 200) {
+        setState(() {
+          _rewardConfig = RewardConfiguration.fromJson(configResponse.data);
+        });
+      }
+
+      // Fetch user points for this retailer
+      final loyaltyResponse = await _apiService.getCustomerLoyalty(
+        widget.retailerId,
+      );
+      if (loyaltyResponse.statusCode == 200) {
+        setState(() {
+          final rawPoints = loyaltyResponse.data['points'];
+          if (rawPoints != null) {
+            if (rawPoints is num) {
+              _userRewardPoints = rawPoints.toDouble();
+            } else if (rawPoints is String) {
+              _userRewardPoints = double.tryParse(rawPoints) ?? 0.0;
+            } else {
+              _userRewardPoints = 0.0;
+            }
+          } else {
+            _userRewardPoints = 0.0;
+          }
+        });
+      }
+
+      _calculateDiscount();
+    } catch (e) {
+      debugPrint('Error fetching reward data: $e');
+    }
+  }
+
+  void _calculateDiscount() {
+    if (!_useRewardPoints || _rewardConfig == null || _userRewardPoints <= 0) {
+      setState(() {
+        _discountFromPoints = 0.0;
+      });
+      return;
+    }
+
+    double subtotal = widget.totalAmount;
+    double deliveryFee = _deliveryMode == 'delivery' ? 50.0 : 0.0;
+    double total = subtotal + deliveryFee;
+
+    double maxByPercent = (total * _rewardConfig!.maxRewardUsagePercent) / 100;
+    double maxByFlat = _rewardConfig!.maxRewardUsageFlat;
+    double maxByBalance = _userRewardPoints * _rewardConfig!.conversionRate;
+
+    double redeemable = [
+      total,
+      maxByPercent,
+      maxByFlat,
+      maxByBalance,
+    ].reduce((curr, next) => curr < next ? curr : next);
+
+    setState(() {
+      _discountFromPoints = redeemable;
+    });
   }
 
   @override
@@ -105,6 +180,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 } else {
                   _paymentMode = 'cash_pickup';
                 }
+                _calculateDiscount();
               }),
             ),
             RadioListTile<String>(
@@ -118,6 +194,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 } else {
                   _paymentMode = 'cash';
                 }
+                _calculateDiscount();
               }),
             ),
             const SizedBox(height: 24),
@@ -135,6 +212,36 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
 
             const SizedBox(height: 24),
+
+            // Rewards Section
+            if (_rewardConfig != null && _userRewardPoints > 0) ...[
+              const Text(
+                'Rewards',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              CheckboxListTile(
+                title: Text(
+                  'Use Reward Points (Available: $_userRewardPoints)',
+                ),
+                subtitle: Text('1 Point = ₹${_rewardConfig!.conversionRate}'),
+                value: _useRewardPoints,
+                onChanged: (value) {
+                  setState(() {
+                    _useRewardPoints = value!;
+                    _calculateDiscount();
+                  });
+                },
+              ),
+              if (_useRewardPoints && _discountFromPoints > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Discount applied: ₹${_discountFromPoints.toStringAsFixed(2)}',
+                    style: const TextStyle(color: Colors.green),
+                  ),
+                ),
+              const SizedBox(height: 24),
+            ],
 
             // Order Summary
             const Text(
@@ -163,6 +270,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
               ],
             ),
+            if (_discountFromPoints > 0)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Points Discount',
+                    style: TextStyle(fontSize: 16, color: Colors.green),
+                  ),
+                  Text(
+                    '-₹${_discountFromPoints.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 16, color: Colors.green),
+                  ),
+                ],
+              ),
             const Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -172,7 +293,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '₹${widget.totalAmount + (_deliveryMode == 'delivery' ? 50 : 0)}',
+                  '₹${(widget.totalAmount + (_deliveryMode == 'delivery' ? 50 : 0) - _discountFromPoints).toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -227,6 +348,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       "address_id": _selectedAddress?.id,
       "delivery_mode": _deliveryMode,
       "payment_mode": _paymentMode,
+      "use_reward_points": _useRewardPoints,
     };
 
     try {

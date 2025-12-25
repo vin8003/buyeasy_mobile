@@ -358,4 +358,19 @@ class ApiService {
       data: {'action': action},
     );
   }
+
+  // Rewards
+  Future<Response> fetchRewardConfiguration(int retailerId) {
+    return _dio.get(
+      'customer/reward-configuration/',
+      queryParameters: {'retailer_id': retailerId},
+    );
+  }
+
+  Future<Response> getCustomerLoyalty(int retailerId) {
+    return _dio.get(
+      'customer/loyalty/',
+      queryParameters: {'retailer_id': retailerId},
+    );
+  }
 }
