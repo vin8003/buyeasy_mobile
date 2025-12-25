@@ -24,10 +24,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
+  List<dynamic> _loyaltyPoints = [];
+
   @override
   void initState() {
     super.initState();
     _fetchProfile();
+    _fetchLoyaltyPoints();
   }
 
   @override
@@ -71,6 +74,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchLoyaltyPoints() async {
+    try {
+      final response = await _apiService.getAllCustomerLoyalty();
+      if (response.statusCode == 200) {
+        setState(() {
+          _loyaltyPoints = response.data;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching loyalty points: $e');
     }
   }
 
@@ -217,6 +233,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const Divider(height: 48),
+                  // Reward Points Section
+                  if (_loyaltyPoints.isNotEmpty) ...[
+                    const Text(
+                      'Your Reward Points',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Card(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _loyaltyPoints.length,
+                        separatorBuilder: (ctx, i) => const Divider(),
+                        itemBuilder: (ctx, i) {
+                          final point = _loyaltyPoints[i];
+                          return ListTile(
+                            leading: const Icon(
+                              Icons.loyalty,
+                              color: Colors.amber,
+                            ),
+                            title: Text(
+                              point['retailer_name'] ?? 'Unknown Retailer',
+                            ),
+                            trailing: Text(
+                              '${double.parse(point['points'].toString()).toStringAsFixed(2)} pts',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                   // Navigation Options
                   ListTile(
                     leading: const Icon(Icons.location_on),

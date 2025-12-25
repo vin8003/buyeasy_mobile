@@ -373,4 +373,8 @@ class ApiService {
       queryParameters: {'retailer_id': retailerId},
     );
   }
+
+  Future<Response> getAllCustomerLoyalty() {
+    return _dio.get('customer/loyalty/all/');
+  }
 }
