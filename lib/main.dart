@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'screens/splash_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
@@ -16,23 +17,72 @@ import 'screens/order_detail_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
 
   try {
-    // Note: This will fail if google-services.json is missing
-    await Firebase.initializeApp();
+    // Check if we are on Android or iOS (where google-services.json/plist handles it)
+    // OR if we are on Linux/Web where we need manual options.
+    // Since google-services.json logic often fails on Linux desktop builds even if plugin is there (it's for Android).
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: FirebaseOptions(
+          apiKey: dotenv.env['API_KEY']!,
+          appId: dotenv.env['APP_ID']!,
+          messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
+          projectId: dotenv.env['PROJECT_ID']!,
+          storageBucket: dotenv.env['STORAGE_BUCKET']!,
+          authDomain: dotenv.env['AUTH_DOMAIN']!,
+        ),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      await Firebase.initializeApp();
+    } else {
+      // Firebase Core does not support Linux/Windows Desktop natively yet.
+      // We skip initialization to allow the app to run for UI testing,
+      // but Firebase features will throw errors if accessed.
+      debugPrint('------------------------------------------------');
+      debugPrint(
+        'WARNING: Firebase is NOT supported on Linux/Windows Desktop.',
+      );
+      debugPrint('Skipping initialization. Auth features will NOT work.');
+      debugPrint(
+        'Please run on Android, iOS, or Chrome for full functionality.',
+      );
+      debugPrint('------------------------------------------------');
+    }
     await NotificationService().initialize();
     debugPrint('Firebase/Notifications initialized successfully');
+    runApp(const MyApp());
   } catch (e) {
     debugPrint('------------------------------------------------');
     debugPrint('FIREBASE ALERT: Initialization failed.');
     debugPrint('Check if google-services.json is in android/app/');
     debugPrint('Error: $e');
     debugPrint('------------------------------------------------');
+    // Run a simple error app
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Text(
+                'Firebase Initialization Failed:\n$e',
+                style: const TextStyle(color: Colors.red, fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
-
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

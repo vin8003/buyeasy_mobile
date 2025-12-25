@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter/material.dart'; // For GlobalKey and NavigatorState
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
@@ -13,10 +15,10 @@ class ApiService {
   String? _refreshToken;
 
   final String _baseUrl = kIsWeb
-      ? 'http://127.0.0.1:8000/api/'
+      ? dotenv.env['API_BASE_URL_OTHER']!
       : (defaultTargetPlatform == TargetPlatform.android
-            ? 'http://10.0.2.2:8000/api/'
-            : 'http://127.0.0.1:8000/api/');
+            ? dotenv.env['API_BASE_URL_ANDROID']!
+            : dotenv.env['API_BASE_URL_OTHER']!);
 
   // Navigation key to allow navigating from outside the widget tree
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -325,11 +327,16 @@ class ApiService {
     return _dio.post('auth/customer/request-verification/');
   }
 
-  Future<Response> verifyOtp(String phone, String otp) {
-    return _dio.post(
-      'auth/customer/verify-otp/',
-      data: {'phone_number': phone, 'otp_code': otp},
-    );
+  Future<Response> verifyOtp(
+    String phone, {
+    String? otp,
+    String? firebaseToken,
+  }) {
+    final data = {'phone_number': phone};
+    if (otp != null) data['otp_code'] = otp;
+    if (firebaseToken != null) data['firebase_token'] = firebaseToken;
+
+    return _dio.post('auth/customer/verify-otp/', data: data);
   }
 
   // Wishlist

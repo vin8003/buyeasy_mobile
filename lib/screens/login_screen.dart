@@ -63,6 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         _showSnackBar("Login Successful!");
+
+        // Check verification status - OPTIONAL now
+        // if (data['user']['is_phone_verified'] == false) { ... }
+
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => HomeContainer()),
           (Route<dynamic> route) => false,

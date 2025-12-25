@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
-import 'login_screen.dart';
+import 'home_container.dart';
 import '../services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -63,10 +63,27 @@ class _SignupScreenState extends State<SignupScreen> {
       });
 
       if (response.statusCode == 201) {
-        _showSnackBar("Signup successful! Please log in.");
+        final data = response.data;
+        // Auto-login
+        if (data['tokens'] != null) {
+          await _apiService.setAuthToken(
+            data['tokens']['access'],
+            data['tokens']['refresh'],
+          );
+        }
 
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
+        _showSnackBar("Signup successful! Verifying phone...");
+
+        if (!mounted) return;
+
+        _showSnackBar("Signup successful! Logging in...");
+
+        if (!mounted) return;
+
+        // Navigate to Home
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => HomeContainer()),
+          (Route<dynamic> route) => false,
         );
       }
     } on DioException catch (e) {

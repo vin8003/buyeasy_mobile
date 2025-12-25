@@ -318,8 +318,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           );
 
           if (result == true) {
-            // Retry placing order or just stay on screen
-            // _placeOrder(); // Optional: Auto-retry
+            _placeOrder(); // Auto-retry
           }
         }
       }
