@@ -364,6 +364,46 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 ],
               ),
             ],
+            if (double.parse(
+                  (_order!['discount_from_points'] ?? '0').toString(),
+                ) >
+                0) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Points Discount',
+                    style: TextStyle(color: Colors.green),
+                  ),
+                  Text(
+                    '-₹${_order!['discount_from_points']}',
+                    style: const TextStyle(color: Colors.green),
+                  ),
+                ],
+              ),
+            ],
+            if (double.tryParse(
+                      (_order!['points_redeemed'] ?? '0').toString(),
+                    ) !=
+                    null &&
+                double.parse((_order!['points_redeemed'] ?? '0').toString()) >
+                    0) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Points Redeemed',
+                    style: TextStyle(color: Colors.orange, fontSize: 12),
+                  ),
+                  Text(
+                    '${double.parse(_order!['points_redeemed'].toString()).toInt()} pts',
+                    style: const TextStyle(color: Colors.orange, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
