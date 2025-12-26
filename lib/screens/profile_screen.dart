@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:dio/dio.dart';
 import '../services/api_service.dart';
@@ -23,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _isLoading = true;
   String _errorMessage = '';
+  String _referralCode = '';
 
   List<dynamic> _loyaltyPoints = [];
 
@@ -59,6 +61,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           phone = phone.substring(3);
         }
         _phoneNumberController.text = phone;
+        setState(() {
+          _referralCode = data['referral_code'] ?? '';
+        });
       } else {
         throw 'Failed to load profile';
       }
@@ -272,6 +277,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 24),
                   ],
+                  // Refer & Earn Section
+                  const Text(
+                    'Refer & Earn',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    color: Colors.blue.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          const Text(
+                            'Share your referral code and earn points when your friends shop!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border.all(color: Colors.blue),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _referralCode,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.5,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.copy,
+                                  color: Colors.blue,
+                                ),
+                                onPressed: () {
+                                  Clipboard.setData(
+                                    ClipboardData(text: _referralCode),
+                                  );
+                                  Fluttertoast.showToast(
+                                    msg: "Referral code copied!",
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.people),
+                    title: const Text('Referral Statistics'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      _showReferralStats();
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   // Navigation Options
                   ListTile(
                     leading: const Icon(Icons.location_on),
@@ -337,6 +413,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  void _showReferralStats() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _apiService.getReferralStats();
+      setState(() => _isLoading = false);
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (!mounted) return;
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (context) => DraggableScrollableSheet(
+            initialChildSize: 0.6,
+            minChildSize: 0.4,
+            maxChildSize: 0.9,
+            expand: false,
+            builder: (context, scrollController) => Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Referral Statistics',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildStatItem(
+                        'Total Referrals',
+                        data['total_referrals'].toString(),
+                      ),
+                      _buildStatItem(
+                        'Successful',
+                        data['successful_referrals'].toString(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Referral History',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: data['referrals_detail'].isEmpty
+                        ? const Center(child: Text('No referrals yet.'))
+                        : ListView.separated(
+                            controller: scrollController,
+                            itemCount: data['referrals_detail'].length,
+                            separatorBuilder: (context, index) =>
+                                const Divider(),
+                            itemBuilder: (context, index) {
+                              final ref = data['referrals_detail'][index];
+                              return ListTile(
+                                title: Text(ref['referee_name']),
+                                subtitle: Text('at ${ref['retailer_name']}'),
+                                trailing: ref['is_rewarded']
+                                    ? const Icon(
+                                        Icons.check_circle,
+                                        color: Colors.green,
+                                      )
+                                    : const Icon(
+                                        Icons.pending,
+                                        color: Colors.orange,
+                                      ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      Fluttertoast.showToast(msg: "Error fetching stats: $e");
+    }
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
+        ),
+        Text(label, style: const TextStyle(color: Colors.grey)),
+      ],
     );
   }
 }

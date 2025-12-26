@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'home_screen.dart';
 import 'category_screen.dart';
 import 'cart_screen.dart';
@@ -10,6 +11,7 @@ import '../models/product.dart';
 import 'product_page.dart';
 import 'order_history_screen.dart';
 import 'order_detail_screen.dart';
+import 'package:shop_easyy/providers/navigation_provider.dart';
 
 class HomeContainer extends StatefulWidget {
   const HomeContainer({super.key});
@@ -19,19 +21,17 @@ class HomeContainer extends StatefulWidget {
 }
 
 class _HomeContainerState extends State<HomeContainer> {
-  int _currentIndex = 0;
   Retailer? _selectedRetailer;
 
   // Create a navigator key to control the nested navigator
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   void onTabTapped(int index) {
-    if (_currentIndex == index) {
+    final navProvider = context.read<NavigationProvider>();
+    if (navProvider.currentIndex == index) {
       _navigatorKey.currentState?.popUntil((route) => route.isFirst);
     } else {
-      setState(() {
-        _currentIndex = index;
-      });
+      navProvider.setIndex(index);
       _navigatorKey.currentState?.pushReplacementNamed(_getRouteName(index));
     }
   }
@@ -56,8 +56,8 @@ class _HomeContainerState extends State<HomeContainer> {
   void _onRetailerSelected(Retailer retailer) {
     setState(() {
       _selectedRetailer = retailer;
-      _currentIndex = 0; // Go to Home (Shop)
     });
+    context.read<NavigationProvider>().setIndex(0); // Go to Home (Shop)
     // Ensure we are on home route
     _navigatorKey.currentState?.pushReplacementNamed('/');
   }
@@ -65,8 +65,8 @@ class _HomeContainerState extends State<HomeContainer> {
   void _changeRetailer() {
     setState(() {
       _selectedRetailer = null;
-      _currentIndex = 0;
     });
+    context.read<NavigationProvider>().setIndex(0);
     _navigatorKey.currentState?.pushReplacementNamed('/');
   }
 
@@ -126,6 +126,8 @@ class _HomeContainerState extends State<HomeContainer> {
 
   @override
   Widget build(BuildContext context) {
+    final navProvider = context.watch<NavigationProvider>();
+
     return Scaffold(
       body: Navigator(
         key: _navigatorKey,
@@ -134,7 +136,7 @@ class _HomeContainerState extends State<HomeContainer> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         onTap: onTabTapped,
-        currentIndex: _currentIndex,
+        currentIndex: navProvider.currentIndex,
         selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,

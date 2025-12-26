@@ -201,6 +201,71 @@ class _HomeScreenState extends State<HomeScreen> {
       onRefresh: _fetchData,
       child: CustomScrollView(
         slivers: [
+          // Referral Banner
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade600, Colors.blue.shade400],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Refer this Shop & Earn Points!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Get reward points for every friend who shops here using your code.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/profile');
+                        },
+                        icon: const Icon(Icons.share, size: 18),
+                        label: const Text('Share My Code'),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.blue,
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _showApplyReferralDialog,
+                        child: const Text(
+                          'Apply Code',
+                          style: TextStyle(
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
           // Categories Header
           if (_categories.isNotEmpty)
             SliverToBoxAdapter(
@@ -339,5 +404,84 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  void _showApplyReferralDialog() {
+    final TextEditingController codeController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Apply Referral Code'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Enter the referral code shared by your friend for this shop.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: codeController,
+              decoration: const InputDecoration(
+                labelText: 'Referral Code',
+                hintText: 'e.g. REF123XYZ',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.characters,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final code = codeController.text.trim();
+              if (code.isEmpty) return;
+
+              Navigator.pop(context);
+              _applyReferralCode(code);
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyReferralCode(String code) async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _apiService.applyReferralCode(
+        code,
+        widget.retailer.id,
+      );
+      setState(() => _isLoading = false);
+
+      if (response.statusCode == 201) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.data['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } on DioException catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+      final errorMsg = e.response?.data['error'] ?? 'Failed to apply code.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An unexpected error occurred.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

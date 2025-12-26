@@ -18,12 +18,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Map<String, dynamic>? _order;
   bool _isLoading = true;
   StreamSubscription? _notificationSubscription;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchOrderDetail();
     _listenForRefreshNotifications();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted && _order != null) {
+        final status = _order!['status'];
+        // Stop polling if order is in terminal state
+        if (status == 'delivered' ||
+            status == 'cancelled' ||
+            status == 'returned') {
+          _stopPolling();
+          return;
+        }
+        _fetchOrderDetail(isPolling: true);
+      }
+    });
+  }
+
+  void _stopPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
   }
 
   void _listenForRefreshNotifications() {
@@ -42,26 +65,44 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   void dispose() {
     _notificationSubscription?.cancel();
+    _stopPolling();
     super.dispose();
   }
 
-  Future<void> _fetchOrderDetail() async {
-    setState(() => _isLoading = true);
+  Future<void> _fetchOrderDetail({bool isPolling = false}) async {
+    if (!isPolling) {
+      setState(() => _isLoading = true);
+    }
+
     try {
-      final response = await _apiService.getOrderDetail(widget.orderId);
+      // Use last_updated to optimize if polling
+      String? lastUpdated;
+      if (isPolling && _order != null) {
+        lastUpdated = _order!['updated_at'];
+      }
+
+      final response = await _apiService.getOrderDetail(
+        widget.orderId,
+        lastUpdated: lastUpdated,
+      );
+
       if (response.statusCode == 200) {
-        setState(() {
-          _order = response.data;
-        });
+        if (mounted) {
+          setState(() {
+            _order = response.data;
+          });
+        }
+      } else if (response.statusCode == 304) {
+        // Not modified, no need to update state
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && !isPolling) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load order details: $e')),
         );
       }
     } finally {
-      if (mounted) {
+      if (mounted && !isPolling) {
         setState(() => _isLoading = false);
       }
     }

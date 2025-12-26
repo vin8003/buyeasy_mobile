@@ -16,6 +16,8 @@ import 'services/api_service.dart';
 import 'screens/order_detail_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
+import 'package:shop_easyy/providers/navigation_provider.dart';
+import 'package:provider/provider.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -58,7 +60,14 @@ Future<void> main() async {
     }
     await NotificationService().initialize();
     debugPrint('Firebase/Notifications initialized successfully');
-    runApp(const MyApp());
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => NavigationProvider()),
+        ],
+        child: const MyApp(),
+      ),
+    );
   } catch (e) {
     debugPrint('------------------------------------------------');
     debugPrint('FIREBASE ALERT: Initialization failed.');

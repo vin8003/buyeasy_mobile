@@ -237,11 +237,11 @@ class ApiService {
 
   // --- User Profile Methods ---
   Future<Response> fetchUserProfile() {
-    return _dio.get('auth/profile/');
+    return _dio.get('customer/profile/');
   }
 
-  Future<Response> updateUserProfile(Map<String, dynamic> profileData) {
-    return _dio.put('auth/profile/update/', data: profileData);
+  Future<Response> updateUserProfile(Map<String, dynamic> data) {
+    return _dio.put('customer/profile/update/', data: data);
   }
 
   // Products
@@ -376,5 +376,17 @@ class ApiService {
 
   Future<Response> getAllCustomerLoyalty() {
     return _dio.get('customer/loyalty/all/');
+  }
+
+  // Referral
+  Future<Response> applyReferralCode(String referralCode, int retailerId) {
+    return _dio.post(
+      'customer/referral/apply/',
+      data: {'referral_code': referralCode, 'retailer_id': retailerId},
+    );
+  }
+
+  Future<Response> getReferralStats() {
+    return _dio.get('customer/referral/stats/');
   }
 }

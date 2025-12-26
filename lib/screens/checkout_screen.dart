@@ -5,6 +5,8 @@ import '../models/address.dart';
 import '../models/reward_configuration.dart';
 import 'address_list_screen.dart';
 import 'phone_verification_screen.dart';
+import 'package:shop_easyy/providers/navigation_provider.dart';
+import 'package:provider/provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final double totalAmount;
@@ -361,8 +363,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
         final orderId = response.data['id'];
 
-        // Navigate to Order Details and clear navigation stack until home
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        // 1. Switch index to Profile tab (4) in NavigationProvider
+        context.read<NavigationProvider>().setIndex(4);
+
+        // 2. Clear stack AND push order detail on the nested navigator
+        // Since we are IN the nested navigator, we just need to ensure
+        // we go to profile first then push order detail?
+        // Actually HomeContainer will rebuild and show ProfileScreen if we set index.
+        // But we want to SHOW the order detail on TOP of profile.
+
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/profile', (route) => false);
         Navigator.of(context).pushNamed('/order-detail', arguments: orderId);
       }
     } on DioException catch (e) {
