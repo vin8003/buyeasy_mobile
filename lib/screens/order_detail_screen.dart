@@ -490,11 +490,124 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             if (_order!['delivery_address_text'] != null)
               _buildInfoRow('Address', _order!['delivery_address_text']),
 
+            const SizedBox(height: 30),
+
+            // Rating Button
+            if (_order!['status'] == 'delivered') ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _showRatingDialog,
+                  icon: const Icon(Icons.star_rate_rounded),
+                  label: const Text('Rate Store'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 40),
           ],
         ),
       ),
     );
+  }
+
+  void _showRatingDialog() {
+    int localRating = 0;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Rate Store'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('How was your experience with this store?'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return IconButton(
+                        icon: Icon(
+                          index < localRating
+                              ? Icons.star_rate_rounded
+                              : Icons.star_border_rounded,
+                          color: Colors.amber,
+                          size: 36,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            localRating = index + 1;
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: commentController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a comment (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: localRating == 0
+                      ? null
+                      : () async {
+                          Navigator.pop(context);
+                          _submitReview(localRating, commentController.text);
+                        },
+                  child: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitReview(int rating, String comment) async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _apiService.createRetailerReview(
+        _order!['retailer'],
+        rating,
+        comment,
+      );
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thank you for your review!')),
+        );
+        _fetchOrderDetail();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error submitting review: $e')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   Widget _buildInfoRow(String label, String value) {

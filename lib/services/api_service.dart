@@ -322,6 +322,22 @@ class ApiService {
     );
   }
 
+  // Reviews
+  Future<Response> getRetailerReviews(int retailerId) {
+    return _dio.get('retailers/$retailerId/reviews/');
+  }
+
+  Future<Response> createRetailerReview(
+    int retailerId,
+    int rating,
+    String comment,
+  ) {
+    return _dio.post(
+      'retailers/$retailerId/reviews/create/',
+      data: {'rating': rating, 'comment': comment},
+    );
+  }
+
   // Verify Phone (OTP)
   Future<Response> requestPhoneVerification() {
     return _dio.post('auth/customer/request-verification/');
