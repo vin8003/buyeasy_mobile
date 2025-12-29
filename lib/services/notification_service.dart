@@ -32,7 +32,7 @@ class NotificationService {
     // Initialize local notifications for foreground display
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings(
-          '@metric/ic_launcher',
+          '@mipmap/ic_launcher',
         ); // Standard launcher icon
 
     // Note: On some systems you might need to use a specifically created transparent icon
