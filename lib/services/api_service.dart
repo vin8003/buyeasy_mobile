@@ -14,7 +14,7 @@ class ApiService {
   String? _accessToken;
   String? _refreshToken;
 
-  final String _baseUrl = kIsWeb
+  String _baseUrl = kIsWeb
       ? dotenv.env['API_BASE_URL_OTHER']!
       : (defaultTargetPlatform == TargetPlatform.android
             ? dotenv.env['API_BASE_URL_ANDROID']!
@@ -117,7 +117,26 @@ class ApiService {
         },
       ),
     );
+    _initBaseUrl(); // Load saved URL on startup
   }
+
+  Future<void> _initBaseUrl() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedUrl = prefs.getString('api_base_url');
+    if (savedUrl != null && savedUrl.isNotEmpty) {
+      _baseUrl = savedUrl;
+      _dio.options.baseUrl = _baseUrl;
+    }
+  }
+
+  Future<void> setBaseUrl(String url) async {
+    _baseUrl = url;
+    _dio.options.baseUrl = url;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('api_base_url', url);
+  }
+
+  String get baseUrl => _baseUrl;
 
   Future<void> _retry(
     RequestOptions requestOptions,
