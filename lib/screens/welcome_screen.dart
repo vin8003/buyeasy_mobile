@@ -27,7 +27,7 @@ class WelcomeScreen extends StatelessWidget {
                 const SizedBox(height: 30),
                 // Title
                 const Text(
-                  'Welcome to\nSHOP EASY',
+                  'Welcome to\nBUY EASY',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
@@ -38,7 +38,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Your Smart & Easy Shopping Solution',
+                  'Easy Shopping For Every Neighbourhood',
                   style: TextStyle(fontSize: 16, color: Colors.black54),
                 ),
                 const SizedBox(height: 40),
