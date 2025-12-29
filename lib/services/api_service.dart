@@ -385,6 +385,27 @@ class ApiService {
     return _dio.post('auth/customer/verify-otp/', data: data);
   }
 
+  Future<Response> forgotPassword(String phone) {
+    return _dio.post('auth/password/forgot/', data: {'phone_number': phone});
+  }
+
+  Future<Response> resetPassword({
+    required String phone,
+    required String newPassword,
+    String? otp,
+    String? firebaseToken,
+  }) {
+    final data = <String, dynamic>{
+      'phone_number': phone,
+      'new_password': newPassword,
+      'confirm_password': newPassword,
+    };
+    if (otp != null) data['otp_code'] = otp;
+    if (firebaseToken != null) data['firebase_token'] = firebaseToken;
+
+    return _dio.post('auth/password/reset/', data: data);
+  }
+
   // Wishlist
   Future<Response> getWishlist() {
     return _dio.get('customer/wishlist/');

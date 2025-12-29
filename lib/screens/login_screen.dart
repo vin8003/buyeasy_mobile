@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'signup_screen.dart';
+import 'forgot_password_screen.dart';
 import 'home_container.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
@@ -219,7 +220,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       )
                     : Text('Log In'),
               ),
-              TextButton(onPressed: () {}, child: Text('Forgot Password?')),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ForgotPasswordScreen(),
+                    ),
+                  );
+                },
+                child: Text('Forgot Password?'),
+              ),
               Wrap(
                 alignment: WrapAlignment.center,
                 crossAxisAlignment: WrapCrossAlignment.center,
