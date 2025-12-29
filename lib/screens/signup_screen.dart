@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
-import 'home_container.dart';
+import 'add_edit_address_screen.dart';
 import '../services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -80,9 +80,12 @@ class _SignupScreenState extends State<SignupScreen> {
 
         if (!mounted) return;
 
-        // Navigate to Home
+        // Navigate to Address Add (Compulsory)
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => HomeContainer()),
+          MaterialPageRoute(
+            builder: (context) =>
+                const AddEditAddressScreen(isCompulsory: true),
+          ),
           (Route<dynamic> route) => false,
         );
       }

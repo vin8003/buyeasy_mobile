@@ -11,6 +11,8 @@ import '../models/product.dart';
 import 'product_page.dart';
 import 'order_history_screen.dart';
 import 'order_detail_screen.dart';
+import 'add_edit_address_screen.dart';
+import '../services/api_service.dart';
 import 'package:shop_easyy/providers/navigation_provider.dart';
 
 class HomeContainer extends StatefulWidget {
@@ -25,6 +27,37 @@ class _HomeContainerState extends State<HomeContainer> {
 
   // Create a navigator key to control the nested navigator
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAddresses();
+  }
+
+  Future<void> _checkAddresses() async {
+    try {
+      final response = await _apiService.getAddresses();
+      if (response.statusCode == 200) {
+        final List addresses = response.data;
+        if (addresses.isEmpty && mounted) {
+          // Force add address
+          Navigator.of(context)
+              .push(
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const AddEditAddressScreen(isCompulsory: true),
+                ),
+              )
+              .then(
+                (_) => _checkAddresses(),
+              ); // Check again after they come back (though pop is blocked)
+        }
+      }
+    } catch (e) {
+      print('Error checking addresses: $e');
+    }
+  }
 
   void onTabTapped(int index) {
     final navProvider = context.read<NavigationProvider>();

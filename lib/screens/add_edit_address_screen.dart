@@ -3,11 +3,17 @@ import '../services/api_service.dart';
 import '../models/address.dart';
 import 'location_picker_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../services/pincode_service.dart';
 
 class AddEditAddressScreen extends StatefulWidget {
   final Address? address;
+  final bool isCompulsory;
 
-  const AddEditAddressScreen({super.key, this.address});
+  const AddEditAddressScreen({
+    super.key,
+    this.address,
+    this.isCompulsory = false,
+  });
 
   @override
   _AddEditAddressScreenState createState() => _AddEditAddressScreenState();
@@ -48,6 +54,25 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
     _isDefault = widget.address?.isDefault ?? false;
     _latitude = widget.address?.latitude;
     _longitude = widget.address?.longitude;
+
+    _pincodeController.addListener(_onPincodeChanged);
+  }
+
+  void _onPincodeChanged() {
+    final pincode = _pincodeController.text;
+    if (pincode.length == 6) {
+      _lookupPincode(pincode);
+    }
+  }
+
+  Future<void> _lookupPincode(String pincode) async {
+    final data = await PincodeService().getCityStateFromPincode(pincode);
+    if (data != null && mounted) {
+      setState(() {
+        _cityController.text = data['city'] ?? _cityController.text;
+        _stateController.text = data['state'] ?? _stateController.text;
+      });
+    }
   }
 
   @override
@@ -104,119 +129,128 @@ class _AddEditAddressScreenState extends State<AddEditAddressScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.address == null ? 'Add Address' : 'Edit Address'),
+        automaticallyImplyLeading: !widget.isCompulsory,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title (e.g., My Home)',
-                ),
-                validator: (value) =>
-                    value!.isEmpty ? 'Please enter a title' : null,
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: _addressType,
-                decoration: const InputDecoration(labelText: 'Address Type'),
-                items: ['home', 'office', 'other'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value.toUpperCase()),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() => _addressType = newValue!);
-                },
-              ),
-              TextFormField(
-                controller: _line1Controller,
-                decoration: const InputDecoration(labelText: 'Address Line 1'),
-                validator: (value) => value!.isEmpty ? 'Required' : null,
-              ),
-              TextFormField(
-                controller: _line2Controller,
-                decoration: const InputDecoration(
-                  labelText: 'Address Line 2 (Optional)',
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _cityController,
-                      decoration: const InputDecoration(labelText: 'City'),
-                      validator: (value) => value!.isEmpty ? 'Required' : null,
-                    ),
+      body: PopScope(
+        canPop: !widget.isCompulsory,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title (e.g., My Home)',
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _stateController,
-                      decoration: const InputDecoration(labelText: 'State'),
-                      validator: (value) => value!.isEmpty ? 'Required' : null,
-                    ),
+                  validator: (value) =>
+                      value!.isEmpty ? 'Please enter a title' : null,
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: _addressType,
+                  decoration: const InputDecoration(labelText: 'Address Type'),
+                  items: ['home', 'office', 'other'].map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value.toUpperCase()),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    setState(() => _addressType = newValue!);
+                  },
+                ),
+                TextFormField(
+                  controller: _line1Controller,
+                  decoration: const InputDecoration(
+                    labelText: 'Address Line 1',
                   ),
-                ],
-              ),
-              TextFormField(
-                controller: _pincodeController,
-                decoration: const InputDecoration(labelText: 'Pincode'),
-                keyboardType: TextInputType.number,
-                validator: (value) =>
-                    value!.length != 6 ? 'Enter valid 6-digit pincode' : null,
-              ),
-              CheckboxListTile(
-                title: const Text('Set as Default Address'),
-                value: _isDefault,
-                onChanged: (bool? value) {
-                  setState(() => _isDefault = value!);
-                },
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final LatLng? result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => LocationPickerScreen(
-                        initialLocation: _latitude != null && _longitude != null
-                            ? LatLng(_latitude!, _longitude!)
-                            : null,
+                  validator: (value) => value!.isEmpty ? 'Required' : null,
+                ),
+                TextFormField(
+                  controller: _line2Controller,
+                  decoration: const InputDecoration(
+                    labelText: 'Address Line 2 (Optional)',
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _cityController,
+                        decoration: const InputDecoration(labelText: 'City'),
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required' : null,
                       ),
                     ),
-                  );
-                  if (result != null) {
-                    setState(() {
-                      _latitude = result.latitude;
-                      _longitude = result.longitude;
-                    });
-                  }
-                },
-                icon: const Icon(Icons.map),
-                label: Text(
-                  _latitude != null
-                      ? 'Location Selected (${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)})'
-                      : 'Select Location from Map',
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _stateController,
+                        decoration: const InputDecoration(labelText: 'State'),
+                        validator: (value) =>
+                            value!.isEmpty ? 'Required' : null,
+                      ),
+                    ),
+                  ],
                 ),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
+                TextFormField(
+                  controller: _pincodeController,
+                  decoration: const InputDecoration(labelText: 'Pincode'),
+                  keyboardType: TextInputType.number,
+                  validator: (value) =>
+                      value!.length != 6 ? 'Enter valid 6-digit pincode' : null,
                 ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveAddress,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
+                CheckboxListTile(
+                  title: const Text('Set as Default Address'),
+                  value: _isDefault,
+                  onChanged: (bool? value) {
+                    setState(() => _isDefault = value!);
+                  },
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Save Address'),
-              ),
-            ],
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final LatLng? result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => LocationPickerScreen(
+                          initialLocation:
+                              _latitude != null && _longitude != null
+                              ? LatLng(_latitude!, _longitude!)
+                              : null,
+                        ),
+                      ),
+                    );
+                    if (result != null) {
+                      setState(() {
+                        _latitude = result.latitude;
+                        _longitude = result.longitude;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.map),
+                  label: Text(
+                    _latitude != null
+                        ? 'Location Selected (${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)})'
+                        : 'Select Location from Map',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _saveAddress,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Save Address'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

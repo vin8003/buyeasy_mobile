@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import '../models/product.dart';
 import '../widgets/product_card.dart';
@@ -31,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _selectedCategoryId;
   bool _isLoading = true;
   String _errorMessage = '';
+  String _userReferralCode = '';
+  bool _isProfileLoading = false;
 
   @override
   void initState() {
@@ -92,6 +95,11 @@ class _HomeScreenState extends State<HomeScreen> {
           _wishlistedProductIds = wishlistedIds;
           _isLoading = false;
         });
+
+        // Fetch profile for referral code if not already fetched
+        if (_userReferralCode.isEmpty) {
+          _fetchUserProfile();
+        }
       } else {
         throw 'Failed to load data';
       }
@@ -101,6 +109,22 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       _errorMessage = 'An unexpected error occurred.';
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchUserProfile() async {
+    setState(() => _isProfileLoading = true);
+    try {
+      final response = await _apiService.fetchUserProfile();
+      if (response.statusCode == 200) {
+        setState(() {
+          _userReferralCode = response.data['referral_code'] ?? '';
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user profile for referral code: $e');
+    } finally {
+      setState(() => _isProfileLoading = false);
     }
   }
 
@@ -222,7 +246,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 children: [
                   const Text(
-                    'Refer this Shop & Earn Points!',
+                    'Your Referral Code for this Shop',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -231,37 +255,89 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Get reward points for every friend who shops here using your code.',
+                    'Share this code with friends! You both earn points when they shop here.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white, fontSize: 13),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/profile');
-                        },
-                        icon: const Icon(Icons.share, size: 18),
-                        label: const Text('Share My Code'),
-                        style: ElevatedButton.styleFrom(
-                          foregroundColor: Colors.blue,
-                          backgroundColor: Colors.white,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _showApplyReferralDialog,
-                        child: const Text(
-                          'Apply Code',
-                          style: TextStyle(
-                            color: Colors.white,
-                            decoration: TextDecoration.underline,
+                  if (_isProfileLoading)
+                    const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                  else if (_userReferralCode.isNotEmpty)
+                    Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white),
+                          ),
+                          child: Text(
+                            _userReferralCode,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Clipboard.setData(
+                                  ClipboardData(text: _userReferralCode),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Referral code copied!'),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.copy, size: 18),
+                              label: const Text('Copy'),
+                              style: ElevatedButton.styleFrom(
+                                foregroundColor: Colors.blue,
+                                backgroundColor: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                // For now just copy as share placeholder
+                                Clipboard.setData(
+                                  ClipboardData(text: _userReferralCode),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Code copied to share!'),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.share, size: 18),
+                              label: const Text('Share'),
+                              style: ElevatedButton.styleFrom(
+                                foregroundColor: Colors.blue,
+                                backgroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  else
+                    const Text(
+                      'Log in to see your referral code.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
                 ],
               ),
             ),
@@ -404,84 +480,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
-
-  void _showApplyReferralDialog() {
-    final TextEditingController codeController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Apply Referral Code'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Enter the referral code shared by your friend for this shop.',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: codeController,
-              decoration: const InputDecoration(
-                labelText: 'Referral Code',
-                hintText: 'e.g. REF123XYZ',
-                border: OutlineInputBorder(),
-              ),
-              textCapitalization: TextCapitalization.characters,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final code = codeController.text.trim();
-              if (code.isEmpty) return;
-
-              Navigator.pop(context);
-              _applyReferralCode(code);
-            },
-            child: const Text('Apply'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _applyReferralCode(String code) async {
-    setState(() => _isLoading = true);
-    try {
-      final response = await _apiService.applyReferralCode(
-        code,
-        widget.retailer.id,
-      );
-      setState(() => _isLoading = false);
-
-      if (response.statusCode == 201) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(response.data['message']),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } on DioException catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-      final errorMsg = e.response?.data['error'] ?? 'Failed to apply code.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
-      );
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('An unexpected error occurred.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 }

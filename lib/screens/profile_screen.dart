@@ -24,15 +24,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _isLoading = true;
   String _errorMessage = '';
-  String _referralCode = '';
-
+  // String _referralCode = ''; // Removed as unused
   List<dynamic> _loyaltyPoints = [];
+  List<dynamic> _retailers = [];
+  int? _selectedRetailerId;
+  final TextEditingController _applyCodeController = TextEditingController();
+  bool _isApplyingCode = false;
 
   @override
   void initState() {
     super.initState();
     _fetchProfile();
     _fetchLoyaltyPoints();
+    _fetchRetailers();
   }
 
   @override
@@ -41,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _lastNameController.dispose();
     _emailController.dispose();
     _phoneNumberController.dispose();
+    _applyCodeController.dispose();
     super.dispose();
   }
 
@@ -61,9 +66,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           phone = phone.substring(3);
         }
         _phoneNumberController.text = phone;
-        setState(() {
-          _referralCode = data['referral_code'] ?? '';
-        });
+        // setState(() {
+        //   _referralCode = data['referral_code'] ?? '';
+        // });
       } else {
         throw 'Failed to load profile';
       }
@@ -92,6 +97,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       debugPrint('Error fetching loyalty points: $e');
+    }
+  }
+
+  Future<void> _fetchRetailers() async {
+    try {
+      final response = await _apiService.getRetailers();
+      if (response.statusCode == 200) {
+        setState(() {
+          _retailers = response.data['results'] ?? [];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching retailers: $e');
+    }
+  }
+
+  Future<void> _applyReferralCode() async {
+    final code = _applyCodeController.text.trim();
+    if (code.isEmpty) {
+      Fluttertoast.showToast(msg: "Please enter a referral code");
+      return;
+    }
+    if (_selectedRetailerId == null) {
+      Fluttertoast.showToast(msg: "Please select a retailer");
+      return;
+    }
+
+    setState(() => _isApplyingCode = true);
+    try {
+      final response = await _apiService.applyReferralCode(
+        code,
+        _selectedRetailerId!,
+      );
+      if (response.statusCode == 201) {
+        Fluttertoast.showToast(
+          msg: response.data['message'],
+          backgroundColor: Colors.green,
+        );
+        _applyCodeController.clear();
+      }
+    } on DioException catch (e) {
+      final errorMsg = e.response?.data['error'] ?? 'Failed to apply code.';
+      Fluttertoast.showToast(msg: errorMsg, backgroundColor: Colors.red);
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: 'An unexpected error occurred.',
+        backgroundColor: Colors.red,
+      );
+    } finally {
+      setState(() => _isApplyingCode = false);
     }
   }
 
@@ -136,279 +191,393 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                Icon(icon, color: Theme.of(context).primaryColor, size: 20),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ...children,
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('My Profile')),
+      appBar: AppBar(title: const Text('My Profile'), elevation: 0),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : _errorMessage.isNotEmpty && _firstNameController.text.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(_errorMessage, style: TextStyle(color: Colors.red)),
-                  SizedBox(height: 20),
+                  Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: _fetchProfile,
-                    child: Text('Retry'),
+                    child: const Text('Retry'),
                   ),
                 ],
               ),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Profile Edit Form
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        TextFormField(
-                          controller: _firstNameController,
-                          decoration: InputDecoration(labelText: 'First Name'),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your first name';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 16),
-                        TextFormField(
-                          controller: _lastNameController,
-                          decoration: InputDecoration(labelText: 'Last Name'),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your last name';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 16),
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: InputDecoration(labelText: 'Email'),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!RegExp(
-                              r'^[^@]+@[^@]+\.[^@]+',
-                            ).hasMatch(value)) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 16),
-                        TextFormField(
-                          controller: _phoneNumberController,
-                          decoration: InputDecoration(
-                            labelText: 'Phone Number',
-                            prefixText: '+91 ',
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide.none,
-                            ),
+                  // User Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 35,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).primaryColor.withOpacity(0.1),
+                          child: Icon(
+                            Icons.person,
+                            size: 40,
+                            color: Theme.of(context).primaryColor,
                           ),
-                          readOnly: true,
                         ),
-                        SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _saveProfile,
-                          child: _isLoading
-                              ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text('Save Profile'),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_firstNameController.text} ${_lastNameController.text}',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                _emailController.text,
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const Divider(height: 48),
-                  // Reward Points Section
-                  if (_loyaltyPoints.isNotEmpty) ...[
-                    const Text(
-                      'Your Reward Points',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Card(
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _loyaltyPoints.length,
-                        separatorBuilder: (ctx, i) => const Divider(),
-                        itemBuilder: (ctx, i) {
-                          final point = _loyaltyPoints[i];
-                          return ListTile(
-                            leading: const Icon(
-                              Icons.loyalty,
-                              color: Colors.amber,
-                            ),
-                            title: Text(
-                              point['retailer_name'] ?? 'Unknown Retailer',
-                            ),
-                            trailing: Text(
-                              '${double.parse(point['points'].toString()).toStringAsFixed(2)} pts',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                  const SizedBox(height: 30),
+
+                  // Account Settings Card
+                  _buildSectionCard(
+                    title: 'Account Settings',
+                    icon: Icons.settings,
+                    children: [
+                      ExpansionTile(
+                        leading: const Icon(Icons.edit_note),
+                        title: const Text('Edit Personal Info'),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  TextFormField(
+                                    controller: _firstNameController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'First Name',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter your first name';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _lastNameController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Last Name',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter your last name';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _emailController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Email',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    keyboardType: TextInputType.emailAddress,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter your email';
+                                      }
+                                      if (!RegExp(
+                                        r'^[^@]+@[^@]+\.[^@]+',
+                                      ).hasMatch(value)) {
+                                        return 'Please enter a valid email';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextFormField(
+                                    controller: _phoneNumberController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Phone Number',
+                                      prefixText: '+91 ',
+                                      filled: true,
+                                      fillColor: Colors.grey[100],
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                    readOnly: true,
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton(
+                                    onPressed: _isLoading ? null : _saveProfile,
+                                    child: _isLoading
+                                        ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Text('Update Profile'),
+                                  ),
+                                ],
                               ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  // My Activity Card
+                  _buildSectionCard(
+                    title: 'My Activity',
+                    icon: Icons.history,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.shopping_bag_outlined),
+                        title: const Text('Order History'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () => Navigator.pushNamed(context, '/orders'),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.location_on_outlined),
+                        title: const Text('My Addresses'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AddressListScreen(),
                             ),
                           );
                         },
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  // Refer & Earn Section
-                  const Text(
-                    'Refer & Earn',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Card(
-                    color: Colors.blue.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Share your referral code and earn points when your friends shop!',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  border: Border.all(color: Colors.blue),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  _referralCode,
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.5,
-                                    color: Colors.blue,
+
+                  // Rewards & Referrals Card
+                  _buildSectionCard(
+                    title: 'Rewards & Referrals',
+                    icon: Icons.card_giftcard,
+                    children: [
+                      if (_loyaltyPoints.isNotEmpty)
+                        ExpansionTile(
+                          leading: const Icon(Icons.stars, color: Colors.amber),
+                          title: const Text('My Reward Points'),
+                          subtitle: Text('${_loyaltyPoints.length} Shops'),
+                          children: [
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _loyaltyPoints.length,
+                              separatorBuilder: (ctx, i) => const Divider(),
+                              itemBuilder: (ctx, i) {
+                                final point = _loyaltyPoints[i];
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.copy,
-                                  color: Colors.blue,
-                                ),
-                                onPressed: () {
-                                  Clipboard.setData(
-                                    ClipboardData(text: _referralCode),
-                                  );
-                                  Fluttertoast.showToast(
-                                    msg: "Referral code copied!",
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.people),
-                    title: const Text('Referral Statistics'),
-                    trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () {
-                      _showReferralStats();
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  // Navigation Options
-                  ListTile(
-                    leading: const Icon(Icons.location_on),
-                    title: const Text('My Addresses'),
-                    trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AddressListScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.history),
-                    title: const Text('Order History'),
-                    trailing: const Icon(Icons.arrow_forward_ios),
-                    onTap: () {
-                      Navigator.pushNamed(context, '/orders');
-                    },
-                  ),
-                  const Divider(),
-                  ListTile(
-                    leading: const Icon(Icons.logout, color: Colors.red),
-                    title: const Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onTap: () async {
-                      // Confirm Logout
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Logout'),
-                          content: const Text(
-                            'Are you sure you want to logout?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text(
-                                'Logout',
-                                style: TextStyle(color: Colors.red),
-                              ),
+                                  title: Text(
+                                    point['retailer_name'] ??
+                                        'Unknown Retailer',
+                                  ),
+                                  trailing: Text(
+                                    '${double.parse(point['points'].toString()).toStringAsFixed(2)} pts',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.teal,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
-                      );
+                      ExpansionTile(
+                        leading: const Icon(Icons.person_add_alt_1_outlined),
+                        title: const Text('Apply Referral Code'),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const Text(
+                                  'Enter a referral code to get points on your first purchase.',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                                const SizedBox(height: 16),
+                                DropdownButtonFormField<int>(
+                                  initialValue: _selectedRetailerId,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Select Retailer',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  items: _retailers.map((retailer) {
+                                    return DropdownMenuItem<int>(
+                                      value: retailer['id'],
+                                      child: Text(retailer['shop_name']),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _selectedRetailerId = value;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: _applyCodeController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Referral Code',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  textCapitalization:
+                                      TextCapitalization.characters,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: _isApplyingCode
+                                      ? null
+                                      : _applyReferralCode,
+                                  child: _isApplyingCode
+                                      ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text('Apply'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.bar_chart_outlined),
+                        title: const Text('Referral Statistics'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: _showReferralStats,
+                      ),
+                    ],
+                  ),
 
-                      if (confirm == true) {
-                        await _apiService.logout();
-                      }
-                    },
+                  // Logout Card
+                  _buildSectionCard(
+                    title: 'App',
+                    icon: Icons.apps,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.logout, color: Colors.red),
+                        title: const Text(
+                          'Logout',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onTap: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Logout'),
+                              content: const Text(
+                                'Are you sure you want to logout?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text(
+                                    'Logout',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+
+                          if (confirm == true) {
+                            await _apiService.logout();
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),

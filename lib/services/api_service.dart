@@ -274,8 +274,19 @@ class ApiService {
   }
 
   // Retailers
-  Future<Response> getRetailers() {
-    return _dio.get('retailers/');
+  Future<Response> getRetailers({
+    String? city,
+    String? userPincode,
+    double? lat,
+    double? lng,
+  }) {
+    final queryParams = <String, dynamic>{};
+    if (city != null) queryParams['city'] = city;
+    if (userPincode != null) queryParams['user_pincode'] = userPincode;
+    if (lat != null) queryParams['lat'] = lat;
+    if (lng != null) queryParams['lng'] = lng;
+
+    return _dio.get('retailers/', queryParameters: queryParams);
   }
 
   // Address

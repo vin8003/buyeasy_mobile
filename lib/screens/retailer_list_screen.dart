@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/retailer.dart';
+import '../models/address.dart';
 
 class RetailerListScreen extends StatefulWidget {
   final Function(Retailer) onRetailerSelected;
@@ -25,7 +26,29 @@ class _RetailerListScreenState extends State<RetailerListScreen> {
   Future<void> _fetchRetailers() async {
     setState(() => _isLoading = true);
     try {
-      final response = await _apiService.getRetailers();
+      // 1. Fetch user addresses to get location
+      final addressResponse = await _apiService.getAddresses();
+      Address? defaultAddress;
+      if (addressResponse.statusCode == 200) {
+        final List<Address> addresses = (addressResponse.data as List)
+            .map((json) => Address.fromJson(json))
+            .toList();
+        if (addresses.isNotEmpty) {
+          defaultAddress = addresses.firstWhere(
+            (a) => (a).isDefault,
+            orElse: () => addresses.first,
+          );
+        }
+      }
+
+      // 2. Fetch retailers with location filters
+      final response = await _apiService.getRetailers(
+        city: defaultAddress?.city,
+        userPincode: defaultAddress?.pincode,
+        lat: defaultAddress?.latitude,
+        lng: defaultAddress?.longitude,
+      );
+
       if (response.statusCode == 200) {
         setState(() {
           _retailers = (response.data['results'] as List)
