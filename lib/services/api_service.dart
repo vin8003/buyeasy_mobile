@@ -14,11 +14,24 @@ class ApiService {
   String? _accessToken;
   String? _refreshToken;
 
-  String _baseUrl = kIsWeb
-      ? dotenv.env['API_BASE_URL_OTHER']!
-      : (defaultTargetPlatform == TargetPlatform.android
-            ? dotenv.env['API_BASE_URL_ANDROID']!
-            : dotenv.env['API_BASE_URL_OTHER']!);
+  String _baseUrl = _ensureApiSuffix(
+    kIsWeb
+        ? dotenv.env['API_BASE_URL_OTHER']!
+        : (defaultTargetPlatform == TargetPlatform.android
+              ? dotenv.env['API_BASE_URL_ANDROID']!
+              : dotenv.env['API_BASE_URL_OTHER']!),
+  );
+
+  static String _ensureApiSuffix(String url) {
+    String formatted = url;
+    if (formatted.endsWith('/')) {
+      formatted = formatted.substring(0, formatted.length - 1);
+    }
+    if (!formatted.endsWith('/api')) {
+      formatted = '$formatted/api';
+    }
+    return '$formatted/';
+  }
 
   // Navigation key to allow navigating from outside the widget tree
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
