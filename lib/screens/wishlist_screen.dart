@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/api_service.dart';
 import '../models/wishlist_item.dart';
 
@@ -91,12 +92,16 @@ class _WishlistScreenState extends State<WishlistScreen> {
                   ),
                   child: ListTile(
                     leading: item.productImage != null
-                        ? Image.network(
-                            ApiService().formatImageUrl(item.productImage),
+                        ? CachedNetworkImage(
+                            imageUrl: ApiService().formatImageUrl(
+                              item.productImage,
+                            ),
                             width: 50,
                             height: 50,
                             fit: BoxFit.cover,
-                            errorBuilder: (ctx, _, __) =>
+                            placeholder: (context, url) =>
+                                Container(color: Colors.grey[200]),
+                            errorWidget: (ctx, _, __) =>
                                 const Icon(Icons.image_not_supported),
                           )
                         : const Icon(Icons.shopping_bag),

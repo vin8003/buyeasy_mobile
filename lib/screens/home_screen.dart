@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../models/retailer.dart';
 import '../models/category.dart';
 import 'wishlist_screen.dart';
+import 'category_products_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Retailer retailer;
@@ -26,11 +27,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
   final TextEditingController _searchController = TextEditingController();
 
-  List<Product> _products = [];
   List<Category> _categories = [];
-  List<Product> _filteredProducts = [];
+  List<Product> _featuredProducts = [];
   Set<int> _wishlistedProductIds = {};
-  int? _selectedCategoryId;
   bool _isLoading = true;
   String _errorMessage = '';
   String _userReferralCode = '';
@@ -41,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchData();
-    _searchController.addListener(_onSearchChanged);
+    // _searchController.addListener(_onSearchChanged);
   }
 
   @override
@@ -57,27 +56,35 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Fetch products and categories concurrently
+      // Fetch retailer-specific categories and featured products concurrently
       final results = await Future.wait([
-        _apiService.getProducts(widget.retailer.id),
-        _apiService.getCategories(),
+        _apiService.getRetailerCategories(widget.retailer.id),
+        _apiService.getFeaturedProducts(widget.retailer.id),
         _apiService.getWishlist(),
       ]);
 
-      final productsResponse = results[0];
-      final categoriesResponse = results[1];
+      final categoriesResponse = results[0];
+      final featuredResponse = results[1];
       final wishlistResponse = results[2];
 
-      if (productsResponse.statusCode == 200 &&
-          categoriesResponse.statusCode == 200 &&
+      if (categoriesResponse.statusCode == 200 &&
+          featuredResponse.statusCode == 200 &&
           wishlistResponse.statusCode == 200) {
-        final List<dynamic> productJson = productsResponse.data['results'];
-        final List<dynamic> categoryJson = categoriesResponse.data;
+        final List<dynamic> categoryJson = categoriesResponse.data is List
+            ? categoriesResponse.data
+            : categoriesResponse.data['results'] ?? [];
+        final List<dynamic> featuredJson = featuredResponse.data is List
+            ? featuredResponse.data
+            : featuredResponse.data['results'] ?? [];
         final List<dynamic> wishlistJson = wishlistResponse.data is List
             ? wishlistResponse.data
             : wishlistResponse.data['results'] ?? [];
 
-        final products = productJson
+        final categories = categoryJson
+            .map((json) => Category.fromJson(json))
+            .toList();
+
+        final featuredProducts = featuredJson
             .map((json) {
               try {
                 return Product.fromJson(json);
@@ -89,18 +96,13 @@ class _HomeScreenState extends State<HomeScreen> {
             .cast<Product>()
             .toList();
 
-        final categories = categoryJson
-            .map((json) => Category.fromJson(json))
-            .toList();
-
         final wishlistedIds = wishlistJson
             .map((json) => json['product'] as int)
             .toSet();
 
         setState(() {
-          _products = products;
-          _filteredProducts = products; // Initially show all
           _categories = categories;
+          _featuredProducts = featuredProducts;
           _wishlistedProductIds = wishlistedIds;
           _isLoading = false;
         });
@@ -137,47 +139,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _filterProducts(int? categoryId) {
-    setState(() {
-      _selectedCategoryId = categoryId;
-      _applyFilters();
-    });
-  }
-
-  void _onSearchChanged() {
-    _applyFilters();
-  }
-
-  void _applyFilters() {
-    setState(() {
-      String query = _searchController.text.toLowerCase();
-      List<Product> baseList = _products;
-
-      // First apply category filter
-      if (_selectedCategoryId != null) {
-        final selectedCategory = _categories.firstWhere(
-          (c) => c.id == _selectedCategoryId,
-        );
-        baseList = baseList
-            .where((p) => p.categoryName == selectedCategory.name)
-            .toList();
-      }
-
-      // Then apply search filter if query length >= 3
-      if (query.length >= 3) {
-        _filteredProducts = baseList
-            .where(
-              (p) =>
-                  p.name.toLowerCase().contains(query) ||
-                  p.description.toLowerCase().contains(query) ||
-                  p.brandName.toLowerCase().contains(query) ||
-                  p.categoryName.toLowerCase().contains(query),
-            )
-            .toList();
-      } else {
-        _filteredProducts = baseList;
-      }
-    });
+  void _navigateToCategory(Category category) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CategoryProductsScreen(
+          retailerId: widget.retailer.id,
+          categoryName: category.name,
+        ),
+      ),
+    );
   }
 
   @override
@@ -246,17 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  int _calculateColumns(double width) {
-    if (width > 1200) return 6;
-    if (width > 900) return 4;
-    if (width > 600) return 3;
-    return 2;
-  }
-
-  double _calculateAspectRatio(double width) {
-    return 0.6;
-  }
-
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -275,266 +235,329 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final width = MediaQuery.of(context).size.width;
-    final columns = _calculateColumns(width);
-    final aspectRatio = _calculateAspectRatio(width);
-
     return RefreshIndicator(
       onRefresh: _fetchData,
-      child: CustomScrollView(
-        slivers: [
-          // Referral Banner
-          SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue.shade600, Colors.blue.shade400],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'Your Referral Code for this Shop',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Share this code with friends! You both earn points when they shop here.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 13),
-                  ),
-                  const SizedBox(height: 16),
-                  if (_isProfileLoading)
-                    const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    )
-                  else if (_userReferralCode.isNotEmpty)
-                    Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.white),
-                          ),
-                          child: Text(
-                            _userReferralCode,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                Clipboard.setData(
-                                  ClipboardData(text: _userReferralCode),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Referral code copied!'),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.copy, size: 18),
-                              label: const Text('Copy'),
-                              style: ElevatedButton.styleFrom(
-                                foregroundColor: Colors.blue,
-                                backgroundColor: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                // For now just copy as share placeholder
-                                Clipboard.setData(
-                                  ClipboardData(text: _userReferralCode),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Code copied to share!'),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.share, size: 18),
-                              label: const Text('Share'),
-                              style: ElevatedButton.styleFrom(
-                                foregroundColor: Colors.blue,
-                                backgroundColor: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    )
-                  else
-                    const Text(
-                      'Log in to see your referral code.',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          // Categories Header
-          if (_categories.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Categories',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/categories');
-                      },
-                      child: const Text('See All'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Referral Banner
+            _buildReferralBanner(),
 
-          // Categories List
-          if (_categories.isNotEmpty)
-            SliverToBoxAdapter(
+            // Categories Section
+            if (_categories.isNotEmpty) ...[
+              _buildSectionHeader(
+                'Shop by Category',
+                onSeeAll: () {
+                  Navigator.pushNamed(context, '/categories');
+                },
+              ),
+              _buildCategoriesGrid(),
+            ],
+
+            // Featured Products Section
+            if (_featuredProducts.isNotEmpty) ...[
+              _buildSectionHeader('Featured Products'),
+              _buildFeaturedProductsList(),
+            ],
+
+            // View All Products Button
+            Padding(
+              padding: const EdgeInsets.all(16.0),
               child: SizedBox(
-                height: 45,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _categories.length + 1,
-                  itemBuilder: (context, index) {
-                    final bool isSelected =
-                        (index == 0 && _selectedCategoryId == null) ||
-                        (index > 0 &&
-                            _selectedCategoryId == _categories[index - 1].id);
-
-                    final String label = index == 0
-                        ? 'All'
-                        : _categories[index - 1].name;
-                    final int? categoryId = index == 0
-                        ? null
-                        : _categories[index - 1].id;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ChoiceChip(
-                        label: Text(label),
-                        selected: isSelected,
-                        onSelected: (_) => _filterProducts(categoryId),
-                        selectedColor: Colors.blueAccent,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 13,
-                        ),
-                        backgroundColor: Colors.white,
-                        elevation: isSelected ? 2 : 0,
-                        pressElevation: 4,
-                        shadowColor: Colors.blueAccent.withOpacity(0.3),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(
-                            color: isSelected
-                                ? Colors.blueAccent
-                                : Colors.grey[300]!,
-                          ),
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CategoryProductsScreen(
+                          retailerId: widget.retailer.id,
+                          categoryName: null, // null means all products
                         ),
                       ),
                     );
                   },
-                ),
-              ),
-            ),
-
-          // Products Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-              child: Text(
-                _selectedCategoryId == null
-                    ? 'Featured Products'
-                    : 'Products in ${_categories.firstWhere((c) => c.id == _selectedCategoryId).name}',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-          ),
-
-          // Products Grid
-          _filteredProducts.isEmpty
-              ? const SliverFillRemaining(
-                  child: Center(child: Text('No products found.')),
-                )
-              : SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
-                      childAspectRatio: aspectRatio,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/product',
-                            arguments: _filteredProducts[i],
-                          );
-                        },
-                        child: ProductCard(
-                          product: _filteredProducts[i],
-                          isWishlisted: _wishlistedProductIds.contains(
-                            _filteredProducts[i].id,
-                          ),
-                        ),
-                      ),
-                      childCount: _filteredProducts.length,
+                  icon: const Icon(Icons.grid_view),
+                  label: const Text('View All Products'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
-          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, {VoidCallback? onSeeAll}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          if (onSeeAll != null)
+            TextButton(onPressed: onSeeAll, child: const Text('See All')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoriesGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 1.0,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: _categories.length > 9 ? 9 : _categories.length,
+        itemBuilder: (context, index) {
+          final category = _categories[index];
+          return _buildCategoryCard(category);
+        },
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(Category category) {
+    // Define category icons mapping
+    final Map<String, IconData> categoryIcons = {
+      'grocery': Icons.shopping_basket,
+      'groceries': Icons.shopping_basket,
+      'fruits': Icons.apple,
+      'vegetables': Icons.eco,
+      'dairy': Icons.egg_alt,
+      'beverages': Icons.local_drink,
+      'snacks': Icons.cookie,
+      'bakery': Icons.bakery_dining,
+      'meat': Icons.kebab_dining,
+      'seafood': Icons.set_meal,
+      'frozen': Icons.ac_unit,
+      'household': Icons.home,
+      'personal care': Icons.face,
+      'baby': Icons.child_care,
+      'pet': Icons.pets,
+      'electronics': Icons.devices,
+      'clothing': Icons.checkroom,
+      'default': Icons.category,
+    };
+
+    IconData getIconForCategory(String categoryName) {
+      final lowerName = categoryName.toLowerCase();
+      for (final entry in categoryIcons.entries) {
+        if (lowerName.contains(entry.key)) {
+          return entry.value;
+        }
+      }
+      return categoryIcons['default']!;
+    }
+
+    return GestureDetector(
+      onTap: () => _navigateToCategory(category),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                getIconForCategory(category.name),
+                size: 28,
+                color: Colors.blue.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                category.name,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedProductsList() {
+    return SizedBox(
+      height: 240,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _featuredProducts.length,
+        itemBuilder: (context, index) {
+          final product = _featuredProducts[index];
+          return Container(
+            width: 160,
+            margin: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/product', arguments: product);
+              },
+              child: ProductCard(
+                product: product,
+                isWishlisted: _wishlistedProductIds.contains(product.id),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildReferralBanner() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade600, Colors.blue.shade400],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'Your Referral Code for this Shop',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Share this code with friends! You both earn points when they shop here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white, fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          if (_isProfileLoading)
+            const Center(child: CircularProgressIndicator(color: Colors.white))
+          else if (_userReferralCode.isNotEmpty)
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white),
+                  ),
+                  child: Text(
+                    _userReferralCode,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(
+                          ClipboardData(text: _userReferralCode),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Referral code copied!'),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy, size: 18),
+                      label: const Text('Copy'),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(
+                          ClipboardData(text: _userReferralCode),
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Code copied to share!'),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.share, size: 18),
+                      label: const Text('Share'),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                        backgroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          else
+            const Text(
+              'Log in to see your referral code.',
+              style: TextStyle(color: Colors.white70),
+            ),
         ],
       ),
     );

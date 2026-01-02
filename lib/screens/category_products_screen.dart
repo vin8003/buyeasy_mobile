@@ -6,14 +6,10 @@ import '../services/api_service.dart';
 enum SortOption { priceLowToHigh, priceHighToLow, name }
 
 class CategoryProductsScreen extends StatefulWidget {
-  final String categoryName;
+  final String? categoryName; // Nullable - when null shows all products
   final int? retailerId;
 
-  const CategoryProductsScreen({
-    super.key,
-    required this.categoryName,
-    this.retailerId,
-  });
+  const CategoryProductsScreen({super.key, this.categoryName, this.retailerId});
 
   @override
   _CategoryProductsScreenState createState() => _CategoryProductsScreenState();
@@ -79,12 +75,14 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             .toSet();
 
         setState(() {
-          // Filter by category
-          // Note: Ensure the casing matches. Backend category names vs UI category names.
-          // The category.name from CategoryScreen comes from backend, so it should match product.categoryName from backend.
-          _products = allProducts
-              .where((p) => p.categoryName == widget.categoryName)
-              .toList();
+          // Filter by category if categoryName is provided, otherwise show all
+          if (widget.categoryName != null) {
+            _products = allProducts
+                .where((p) => p.categoryName == widget.categoryName)
+                .toList();
+          } else {
+            _products = allProducts;
+          }
           _wishlistedProductIds = wishlistedIds;
           _sortProducts();
           _isLoading = false;
@@ -197,7 +195,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
-          widget.categoryName,
+          widget.categoryName ?? 'All Products',
           style: const TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
