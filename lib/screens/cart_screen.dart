@@ -1,5 +1,6 @@
 // cart_screen.dart
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import '../services/api_service.dart';
 import 'checkout_screen.dart';
@@ -305,12 +306,17 @@ class _CartScreenState extends State<CartScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            item.imageUrl,
+                          child: CachedNetworkImage(
+                            imageUrl: item.imageUrl,
                             width: 80,
                             height: 80,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
+                            placeholder: (context, url) => Container(
+                              width: 80,
+                              height: 80,
+                              color: Colors.grey[200],
+                            ),
+                            errorWidget: (context, error, stackTrace) {
                               return Container(
                                 width: 80,
                                 height: 80,

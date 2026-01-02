@@ -23,6 +23,15 @@ class ApiService {
   // Navigation key to allow navigating from outside the widget tree
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+  // Callback for when automatic logout happens due to token expiration
+  VoidCallback? _onForcedLogout;
+
+  /// Set a callback to be invoked when the API service forces a logout
+  /// due to token expiration or invalid token.
+  void setForcedLogoutCallback(VoidCallback? callback) {
+    _onForcedLogout = callback;
+  }
+
   String formatImageUrl(String? path) {
     if (path == null || path.isEmpty) return 'https://via.placeholder.com/150';
     if (path.startsWith('http')) return path;
@@ -60,7 +69,8 @@ class ApiService {
           return handler.next(options);
         },
         onError: (DioException e, handler) async {
-          if (e.response?.statusCode == 401) {
+          // Handle both 401 (Unauthorized) and 403 (token_not_valid) errors
+          if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
             // Check if it's a refresh token failure or if we don't have a refresh token
             if (_refreshToken == null ||
                 e.requestOptions.path.contains('/auth/token/refresh/')) {
@@ -165,8 +175,9 @@ class ApiService {
 
   Future<void> logout() async {
     await setAuthToken(null, null);
+    // Notify listeners (e.g., AuthProvider) about the forced logout
+    _onForcedLogout?.call();
     // Use navigatorKey to navigate to login screen
-    // We assume '/login' route exists or we push LoginScreen
     navigatorKey.currentState?.pushNamedAndRemoveUntil(
       '/login',
       (route) => false,

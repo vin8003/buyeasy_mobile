@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
@@ -329,12 +331,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          ApiService().formatImageUrl(item['product_image']),
+                        child: CachedNetworkImage(
+                          imageUrl: ApiService().formatImageUrl(
+                            item['product_image'],
+                          ),
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
+                          placeholder: (context, url) => Container(
+                            width: 60,
+                            height: 60,
+                            color: Colors.grey[200],
+                          ),
+                          errorWidget: (context, error, stackTrace) =>
                               Container(
                                 width: 60,
                                 height: 60,

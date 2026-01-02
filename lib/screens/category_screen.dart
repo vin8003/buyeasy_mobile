@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/api_service.dart';
 import '../models/category.dart';
 import 'category_products_screen.dart';
@@ -216,10 +217,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
                   top: Radius.circular(20),
                 ),
                 child: category.image != null && category.image!.isNotEmpty
-                    ? Image.network(
-                        category.image!,
+                    ? CachedNetworkImage(
+                        imageUrl: category.image!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
+                        placeholder: (context, url) =>
+                            _buildFallbackCover(categoryColor, category.name),
+                        errorWidget: (context, error, stackTrace) =>
                             _buildFallbackCover(categoryColor, category.name),
                       )
                     : _buildFallbackCover(categoryColor, category.name),
