@@ -74,13 +74,15 @@ class _LoginScreenState extends State<LoginScreen> {
           (Route<dynamic> route) => false,
         );
       }
-    } on DioException catch (e) {
-      String errorMessage =
-          e.response?.data['detail'] ?? 'Invalid credentials.';
+    } on DioException catch (_) {
+      String errorMessage = "Password mismatched";
       _showSnackBar(errorMessage, isError: true);
-    } catch (e) {
+    } catch (_) {
       _showSnackBar("An unexpected error occurred.", isError: true);
-      if (mounted) setState(() => _isLoading = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

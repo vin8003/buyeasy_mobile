@@ -24,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
+  final TextEditingController _searchController = TextEditingController();
 
   List<Product> _products = [];
   List<Category> _categories = [];
@@ -34,11 +35,19 @@ class _HomeScreenState extends State<HomeScreen> {
   String _errorMessage = '';
   String _userReferralCode = '';
   bool _isProfileLoading = false;
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _fetchData();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchData() async {
@@ -131,19 +140,42 @@ class _HomeScreenState extends State<HomeScreen> {
   void _filterProducts(int? categoryId) {
     setState(() {
       _selectedCategoryId = categoryId;
-      if (categoryId == null) {
-        _filteredProducts = _products;
-      } else {
+      _applyFilters();
+    });
+  }
+
+  void _onSearchChanged() {
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    setState(() {
+      String query = _searchController.text.toLowerCase();
+      List<Product> baseList = _products;
+
+      // First apply category filter
+      if (_selectedCategoryId != null) {
         final selectedCategory = _categories.firstWhere(
-          (c) => c.id == categoryId,
+          (c) => c.id == _selectedCategoryId,
         );
-        // Assuming Product has category field or matching by name.
-        // Based on previous code, Product didn't have categoryId, so limiting filtering by name for now if applicable,
-        // or just filtering by what we have.
-        // Checking Product model might be needed, but for now assuming name match as per previous plan.
-        _filteredProducts = _products
+        baseList = baseList
             .where((p) => p.categoryName == selectedCategory.name)
             .toList();
+      }
+
+      // Then apply search filter if query length >= 3
+      if (query.length >= 3) {
+        _filteredProducts = baseList
+            .where(
+              (p) =>
+                  p.name.toLowerCase().contains(query) ||
+                  p.description.toLowerCase().contains(query) ||
+                  p.brandName.toLowerCase().contains(query) ||
+                  p.categoryName.toLowerCase().contains(query),
+            )
+            .toList();
+      } else {
+        _filteredProducts = baseList;
       }
     });
   }
@@ -152,19 +184,33 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Shop Easy', style: TextStyle(fontSize: 16)),
-            Text(
-              widget.retailer.shopName,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.black87, fontSize: 16),
+                decoration: const InputDecoration(
+                  hintText: 'Search products...',
+                  hintStyle: TextStyle(color: Colors.grey),
+                  border: InputBorder.none,
+                ),
+                onChanged: (value) {
+                  // _onSearchChanged will handle the filtering
+                },
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Shop Easy', style: TextStyle(fontSize: 16)),
+                  Text(
+                    widget.retailer.shopName,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.store),
@@ -181,7 +227,19 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _isSearching = false;
+                  _searchController.clear();
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
+          ),
         ],
       ),
       body: _buildBody(),

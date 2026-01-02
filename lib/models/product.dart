@@ -8,6 +8,7 @@ class Product {
   final double discountPercent; // Field name from API is 'discount_percentage'
   final String unit;
   final String categoryName;
+  final String brandName;
   final int stockQuantity;
   final bool isAvailable;
 
@@ -21,6 +22,7 @@ class Product {
     required this.discountPercent,
     required this.unit,
     required this.categoryName,
+    required this.brandName,
     required this.stockQuantity,
     this.isAvailable = true,
   });
@@ -49,6 +51,7 @@ class Product {
       image: json['image'] ?? '', // This should be the main image URL
       unit: json['unit'] ?? 'piece',
       categoryName: json['category_name'] ?? '',
+      brandName: json['brand_name'] ?? '',
       stockQuantity: json['quantity'] ?? 0,
       isAvailable: json['is_available'] ?? true,
     );

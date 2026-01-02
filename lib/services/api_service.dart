@@ -26,7 +26,17 @@ class ApiService {
   String formatImageUrl(String? path) {
     if (path == null || path.isEmpty) return 'https://via.placeholder.com/150';
     if (path.startsWith('http')) return path;
-    return '$_baseUrl${path.startsWith('/') ? path.substring(1) : path}';
+
+    // Media files are usually at /media/, but baseUrl often ends in /api/
+    // We need to strip /api/ to get the base domain for media files.
+    String mediaBase = _baseUrl;
+    if (mediaBase.endsWith('/api/')) {
+      mediaBase = mediaBase.substring(0, mediaBase.length - 5);
+    } else if (mediaBase.endsWith('/api')) {
+      mediaBase = mediaBase.substring(0, mediaBase.length - 4);
+    }
+
+    return '$mediaBase${path.startsWith('/') ? path : '/$path'}';
   }
 
   // --- Concurrency / Refresh Locking ---
@@ -350,6 +360,10 @@ class ApiService {
         },
       ),
     );
+  }
+
+  Future<Response> cancelOrder(int orderId, {String? reason}) {
+    return _dio.post('orders/$orderId/cancel/', data: {'reason': reason ?? ''});
   }
 
   // Reviews
