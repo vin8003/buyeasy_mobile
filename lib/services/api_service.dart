@@ -283,6 +283,14 @@ class ApiService {
     return _dio.get('products/categories/');
   }
 
+  Future<Response> getRetailerCategories(int retailerId) {
+    return _dio.get('products/retailer/$retailerId/categories/');
+  }
+
+  Future<Response> getFeaturedProducts(int retailerId) {
+    return _dio.get('products/retailer/$retailerId/featured/');
+  }
+
   // Cart
   Future<Response> getCart(int retailerId) {
     return _dio.get('cart/', queryParameters: {'retailer_id': retailerId});
