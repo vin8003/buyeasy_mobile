@@ -172,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Shop Easy', style: TextStyle(fontSize: 16)),
+                  const Text('Order Easy', style: TextStyle(fontSize: 16)),
                   Text(
                     widget.retailer.shopName,
                     style: const TextStyle(

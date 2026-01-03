@@ -27,7 +27,7 @@ class WelcomeScreen extends StatelessWidget {
                 const SizedBox(height: 30),
                 // Title
                 const Text(
-                  'Welcome to\nBUY EASY',
+                  'Welcome to\nORDER EASY',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,

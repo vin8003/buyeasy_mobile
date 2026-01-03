@@ -1,6 +1,6 @@
 {
-    "name": "shop_easyy",
-    "short_name": "shop_easyy",
+    "name": "Order Easy",
+    "short_name": "Order Easy",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

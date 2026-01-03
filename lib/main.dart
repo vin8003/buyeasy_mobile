@@ -101,7 +101,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: ApiService().navigatorKey,
-      title: 'Shop Easyy',
+      title: 'Order Easy',
       theme: ThemeData(
         primarySwatch: Colors.teal,
         visualDensity: VisualDensity.adaptivePlatformDensity,
