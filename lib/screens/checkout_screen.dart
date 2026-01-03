@@ -446,8 +446,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  PhoneVerificationScreen(phoneNumber: phoneNumber),
+              builder: (context) => PhoneVerificationScreen(
+                phoneNumber: phoneNumber,
+                autoRequestOtp: false,
+              ),
             ),
           );
 
