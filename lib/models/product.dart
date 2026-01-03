@@ -11,6 +11,7 @@ class Product {
   final String brandName;
   final int stockQuantity;
   final bool isAvailable;
+  final List<String> images;
 
   Product({
     required this.id,
@@ -25,6 +26,7 @@ class Product {
     required this.brandName,
     required this.stockQuantity,
     this.isAvailable = true,
+    this.images = const [],
   });
 
   // A factory constructor to safely create a Product from JSON data
@@ -54,6 +56,8 @@ class Product {
       brandName: json['brand_name'] ?? '',
       stockQuantity: json['quantity'] ?? 0,
       isAvailable: json['is_available'] ?? true,
+      images:
+          (json['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
 

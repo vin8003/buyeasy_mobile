@@ -96,13 +96,33 @@ class _ProductPageState extends State<ProductPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            CachedNetworkImage(
-              imageUrl: imageUrl,
-              placeholder: (context, url) =>
-                  Center(child: CircularProgressIndicator()),
-              errorWidget: (context, url, error) => const Icon(Icons.error),
-              fit: BoxFit.cover,
+            SizedBox(
               height: 300,
+              child: widget.product.images.isNotEmpty
+                  ? PageView.builder(
+                      itemCount: widget.product.images.length,
+                      itemBuilder: (context, index) {
+                        final imgUrl = ApiService().formatImageUrl(
+                          widget.product.images[index],
+                        );
+                        return CachedNetworkImage(
+                          imageUrl: imgUrl,
+                          placeholder: (context, url) =>
+                              const Center(child: CircularProgressIndicator()),
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.error),
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      placeholder: (context, url) =>
+                          const Center(child: CircularProgressIndicator()),
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.error),
+                      fit: BoxFit.cover,
+                    ),
             ),
             const SizedBox(height: 16),
             Padding(
