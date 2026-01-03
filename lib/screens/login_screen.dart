@@ -86,59 +86,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showUrlSettingsDialog() {
-    final TextEditingController urlController = TextEditingController(
-      text: _apiService.baseUrl,
-    );
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Server Address'),
-          content: TextField(
-            controller: urlController,
-            decoration: InputDecoration(
-              labelText: 'API Base URL',
-              hintText: 'http://192.168.x.x:8000/api',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await _apiService.setBaseUrl(urlController.text.trim());
-                if (mounted) {
-                  Navigator.pop(context);
-                  _showSnackBar("Server URL updated!");
-                }
-              },
-              child: Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     // UI remains the same
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.settings, color: Colors.grey),
-            onPressed: _showUrlSettingsDialog,
-          ),
-        ],
-      ),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
