@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/api_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -18,12 +17,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final ApiService _apiService = ApiService();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   bool _isCodeSent = false;
   bool _isLoading = false;
-  String? _verificationId;
-  String? _idToken;
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
@@ -53,7 +49,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       try {
         final response = await _apiService.forgotPassword(phone);
         if (response.statusCode == 200) {
-          await _sendFirebaseOtp();
+          setState(() {
+            _isCodeSent = true;
+            _isLoading = false;
+          });
+          _showSnackBar(response.data['message'] ?? 'OTP sent successfully');
         }
       } catch (e) {
         setState(() => _isLoading = false);
@@ -66,126 +66,41 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  Future<void> _sendFirebaseOtp() async {
-    final phone = '+91${_phoneController.text.trim()}';
-    try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: phone,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          await _signInWithCredential(credential);
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          setState(() {
-            _isLoading = false;
-          });
-          _showSnackBar('Verification failed: ${e.message}', isError: true);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          setState(() {
-            _verificationId = verificationId;
-            _isCodeSent = true;
-            _isLoading = false;
-          });
-          _showSnackBar('OTP sent successfully');
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-        },
-      );
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showSnackBar('Error sending OTP: $e', isError: true);
-    }
-  }
-
-  Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
-    try {
-      setState(() => _isLoading = true);
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
-
-      if (user != null) {
-        final idToken = await user.getIdToken();
-        setState(() {
-          _idToken = idToken;
-          _isCodeSent = true;
-          _isLoading = false;
-        });
-        _showSnackBar('OTP Verified! Please set new password.');
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showSnackBar('OTP Verification Failed: $e', isError: true);
-    }
-  }
-
   Future<void> _verifyAndReset() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       _showSnackBar("Passwords do not match", isError: true);
       return;
     }
 
-    if (_otpController.text.isEmpty && _idToken == null) {
+    if (_otpController.text.isEmpty) {
       _showSnackBar("Please enter OTP", isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
 
-    // 1. Verify OTP with Firebase if token not yet obtained
-    if (_idToken == null) {
-      if (_verificationId == null) {
-        _showSnackBar(
-          "Something went wrong. Please resend OTP.",
-          isError: true,
-        );
-        setState(() => _isLoading = false);
-        return;
-      }
+    // Call Backend Reset with OTP
+    final phone = '+91${_phoneController.text.trim()}';
+    try {
+      final response = await _apiService.resetPassword(
+        phone: phone,
+        newPassword: _passwordController.text.trim(),
+        otp: _otpController.text.trim(),
+      );
 
-      try {
-        final credential = PhoneAuthProvider.credential(
-          verificationId: _verificationId!,
-          smsCode: _otpController.text.trim(),
-        );
-
-        final userCredential = await _auth.signInWithCredential(credential);
-        final user = userCredential.user;
-        if (user != null) {
-          _idToken = await user.getIdToken();
+      if (response.statusCode == 200) {
+        _showSnackBar("Password reset successfully! Please login.");
+        if (mounted) {
+          Navigator.pop(context);
         }
-      } catch (e) {
-        setState(() => _isLoading = false);
-        _showSnackBar("Invalid OTP", isError: true);
-        return;
       }
-    }
-
-    // 2. Call Backend Reset
-    if (_idToken != null) {
-      final phone = '+91${_phoneController.text.trim()}';
-      try {
-        final response = await _apiService.resetPassword(
-          phone: phone,
-          firebaseToken: _idToken!,
-          newPassword: _passwordController.text.trim(),
-        );
-
-        if (response.statusCode == 200) {
-          _showSnackBar("Password reset successfully! Please login.");
-          if (mounted) {
-            Navigator.pop(context);
-          }
-        }
-      } catch (e) {
-        setState(() => _isLoading = false);
-        String msg = "Failed to reset password";
-        if (e is DioException) {
-          msg = e.response?.data['error'] ?? msg;
-        }
-        _showSnackBar(msg, isError: true);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      String msg = "Failed to reset password";
+      if (e is DioException) {
+        msg = e.response?.data['error'] ?? msg;
       }
+      _showSnackBar(msg, isError: true);
     }
   }
 
@@ -295,9 +210,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                       ),
-                      validator: (value) => (value!.isEmpty && _idToken == null)
-                          ? 'Enter OTP'
-                          : null,
+                      validator: (value) => value!.isEmpty ? 'Enter OTP' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -378,8 +291,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           : () {
                               setState(() {
                                 _isCodeSent = false;
-                                _verificationId = null;
-                                _idToken = null;
+                                _isLoading = false;
                               });
                             },
                       child: Text("Change Phone Number"),
