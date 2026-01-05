@@ -17,6 +17,7 @@ import 'screens/order_detail_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'services/notification_service.dart';
 import 'package:shop_easyy/providers/navigation_provider.dart';
+import 'providers/order_provider.dart';
 import 'package:provider/provider.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -64,6 +65,7 @@ Future<void> main() async {
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => NavigationProvider()),
+          ChangeNotifierProvider(create: (_) => OrderProvider()),
         ],
         child: const MyApp(),
       ),

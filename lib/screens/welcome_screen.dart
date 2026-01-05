@@ -48,19 +48,23 @@ class WelcomeScreen extends StatelessWidget {
                     Navigator.pushNamed(context, '/login');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: const Color(0xFF2563EB), // Sleek blue
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 16,
+                      horizontal: 48,
+                      vertical: 18,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(
+                        30,
+                      ), // Rounded pill shape
                     ),
-                    elevation: 4,
+                    elevation: 5,
+                    shadowColor: Colors.blue.withOpacity(0.4),
                   ),
                   child: const Text(
-                    'Get Started',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                    "Let's Shop",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],

@@ -5,6 +5,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
+import 'order_chat_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/order_provider.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
@@ -93,6 +96,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           setState(() {
             _order = response.data;
           });
+          final unreadCount = _order!['unread_chat_count'] ?? 0;
+          context.read<OrderProvider>().updateUnreadCount(
+            widget.orderId,
+            unreadCount,
+          );
         }
       } else if (response.statusCode == 304) {
         // Not modified, no need to update state
@@ -213,6 +221,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       appBar: AppBar(
         title: Text('Order #${_order!['order_number']}'),
         elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -312,6 +322,68 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
                   ],
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Chat CTA Button
+            SizedBox(
+              width: double.infinity,
+              child: Consumer<OrderProvider>(
+                builder: (context, provider, _) {
+                  final count = provider.unreadCounts[widget.orderId] ?? 0;
+                  return ElevatedButton.icon(
+                    onPressed: () {
+                      provider.resetUnreadCount(widget.orderId);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderChatScreen(
+                            orderId: widget.orderId,
+                            orderNumber: _order!['order_number'],
+                            retailerName: _order!['retailer_name'],
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Icon(Icons.chat_bubble_outline),
+                        if (count > 0)
+                          Positioned(
+                            right: -8,
+                            top: -8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                '$count',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    label: const Text('Chat about this Order'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 1,
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 20),
