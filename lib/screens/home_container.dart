@@ -13,10 +13,7 @@ import 'order_history_screen.dart';
 import 'order_detail_screen.dart';
 import 'add_edit_address_screen.dart';
 import '../services/api_service.dart';
-import '../providers/order_provider.dart';
 import 'package:shop_easyy/providers/navigation_provider.dart';
-import 'dart:async';
-import '../services/notification_service.dart';
 
 class HomeContainer extends StatefulWidget {
   const HomeContainer({super.key});
@@ -31,58 +28,11 @@ class _HomeContainerState extends State<HomeContainer> {
   // Create a navigator key to control the nested navigator
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final ApiService _apiService = ApiService();
-  StreamSubscription? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkAddresses();
-    _listenForNotifications();
-  }
-
-  @override
-  void dispose() {
-    _notificationSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _listenForNotifications() {
-    _notificationSubscription = NotificationService().updateStream.listen((
-      data,
-    ) {
-      if (data['event'] == 'order_chat') {
-        if (mounted) {
-          final orderId = int.tryParse(data['order_id'].toString());
-          if (orderId != null) {
-            final currentChatId = context
-                .read<OrderProvider>()
-                .currentChatOrderId;
-
-            // Only show notification and increment count if NOT in that chat
-            if (currentChatId != orderId) {
-              context.read<OrderProvider>().incrementUnreadCount(orderId);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('New message from Store!'),
-                  action: SnackBarAction(
-                    label: 'VIEW',
-                    textColor: Colors.tealAccent,
-                    onPressed: () {
-                      _navigatorKey.currentState?.pushNamed(
-                        '/order-detail',
-                        arguments: orderId,
-                      );
-                    },
-                  ),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          }
-        }
-      }
-    });
   }
 
   Future<void> _checkAddresses() async {
