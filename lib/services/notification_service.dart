@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shop_easyy/services/api_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -48,18 +47,11 @@ class NotificationService {
     await _localNotifications.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (details) {
-        // Handle notification click while app is open (Foreground)
-        if (details.payload != null) {
-          // Note: payload might need parsing if it's a JSON string,
-          // but typically local notifications need manually passed payload data.
-          // For FCM forwarding, we'd need to have passed the data into the payload when showing it.
-          // However, simpler approach for now is relying on FCM interactive callbacks if possible,
-          // OR ensuring we attach data as payload when showing local notification.
-          _handleLocalNotificationTap(details.payload);
-        }
+        // Handle notification click while app is open
       },
     );
 
+    // Create notification channel for Android 8.0+
     // Create notification channel for Android 8.0+
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -76,18 +68,15 @@ class NotificationService {
           ?.createNotificationChannel(channel);
     }
 
-    // Check for initial message (Terminated state)
-    _fcm?.getInitialMessage().then((RemoteMessage? message) {
-      if (message != null) {
-        _handleMessageTap(message);
-      }
-    });
-
     // Listen for foreground messages
     FirebaseMessaging.onMessage.listen(_handleMessage);
 
     // Listen for background message clicks
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageTap);
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      if (kDebugMode) {
+        print('Message clicked! ${message.data}');
+      }
+    });
   }
 
   Future<String?> getToken() async {
@@ -99,36 +88,6 @@ class NotificationService {
         print('Error getting FCM token: $e');
       }
       return null;
-    }
-  }
-
-  void _handleMessageTap(RemoteMessage message) {
-    if (kDebugMode) {
-      print('Message clicked: ${message.data}');
-    }
-    _navigateToOrder(message.data);
-  }
-
-  void _handleLocalNotificationTap(String? payload) {
-    if (payload != null) {
-      _navigateToOrder({'order_id': payload});
-    }
-  }
-
-  void _navigateToOrder(Map<String, dynamic> data) {
-    // Support 'order_id' or 'id'
-    final orderId = data['order_id'] ?? data['id'];
-    if (orderId != null) {
-      // Use the global navigator key to push the screen
-      // We need to valid id type, usually int or string.
-      // OrderDetailScreen expects int.
-      int? parsedId = int.tryParse(orderId.toString());
-      if (parsedId != null) {
-        ApiService().navigatorKey.currentState?.pushNamed(
-          '/order-detail',
-          arguments: parsedId,
-        );
-      }
     }
   }
 
@@ -159,10 +118,6 @@ class NotificationService {
             icon: '@mipmap/ic_launcher',
           ),
         ),
-        // Pass data as payload for local click handling
-        payload:
-            message.data['order_id']?.toString() ??
-            message.data['id']?.toString(), // Simple payload for now
       );
     }
   }
