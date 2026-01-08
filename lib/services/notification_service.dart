@@ -96,8 +96,10 @@ class NotificationService {
       print('Handling foreground message: ${message.messageId}');
     }
 
-    // Check if it's a silent update
-    if (message.data['is_silent'] == 'true' || message.data['event'] != null) {
+    // Check if it's a silent update or a chat message
+    if (message.data['is_silent'] == 'true' ||
+        message.data['event'] != null ||
+        message.data['type'] == 'order_chat') {
       _updateController.add(Map<String, dynamic>.from(message.data));
       // Don't show a notification if it's silent
       if (message.data['is_silent'] == 'true') return;

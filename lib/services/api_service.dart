@@ -12,7 +12,7 @@ class ApiService {
   String? _accessToken;
   String? _refreshToken;
 
-  String _baseUrl = 'https://api.ordereasy.win/api/';
+  String _baseUrl = 'http://ordereasy.win/api/';
 
   // Navigation key to allow navigating from outside the widget tree
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -135,8 +135,9 @@ class ApiService {
   }
 
   Future<void> _initBaseUrl() async {
-    _baseUrl = 'https://api.ordereasy.win/api/';
+    _baseUrl = 'http://127.0.0.1:8000/api/';
     _dio.options.baseUrl = _baseUrl;
+    print('ApiService Initialized with Base URL: $_baseUrl');
   }
 
   Future<void> setBaseUrl(String url) async {
@@ -478,5 +479,18 @@ class ApiService {
 
   Future<Response> getReferralStats() {
     return _dio.get('customer/referral/stats/');
+  }
+
+  // Chat
+  Future<Response> getOrderChatMessages(int orderId) {
+    return _dio.get('orders/$orderId/chat/');
+  }
+
+  Future<Response> sendOrderMessage(int orderId, String message) {
+    return _dio.post('orders/$orderId/chat/send/', data: {'message': message});
+  }
+
+  Future<Response> markOrderChatRead(int orderId) {
+    return _dio.post('orders/$orderId/chat/read/');
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
+import '../screens/order_chat_screen.dart';
 import '../services/notification_service.dart';
 
 class OrderDetailScreen extends StatefulWidget {
@@ -55,8 +56,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     _notificationSubscription = NotificationService().updateStream.listen((
       data,
     ) {
+      bool shouldRefresh = false;
       if (data['event'] == 'order_refresh' &&
           data['order_id'] == widget.orderId.toString()) {
+        shouldRefresh = true;
+      }
+      if (data['type'] == 'order_chat' &&
+          data['order_id'] == widget.orderId.toString()) {
+        shouldRefresh = true;
+      }
+
+      if (shouldRefresh) {
         if (mounted) {
           _fetchOrderDetail();
         }
@@ -213,6 +223,52 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       appBar: AppBar(
         title: Text('Order #${_order!['order_number']}'),
         elevation: 0,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderChatScreen(
+                orderId: widget.orderId,
+                orderNumber: _order!['order_number'],
+              ),
+            ),
+          );
+          _fetchOrderDetail(); // Refresh to clear badge
+        },
+        label: const Text('Chat'),
+        icon: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Icon(Icons.chat),
+            if ((_order!['unread_messages_count'] ?? 0) > 0)
+              Positioned(
+                right: -8,
+                top: -8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    '${_order!['unread_messages_count']}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),

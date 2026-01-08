@@ -14,6 +14,9 @@ import 'order_detail_screen.dart';
 import 'add_edit_address_screen.dart';
 import '../services/api_service.dart';
 import 'package:shop_easyy/providers/navigation_provider.dart';
+import 'dart:async';
+import '../services/notification_service.dart';
+import 'order_chat_screen.dart';
 
 class HomeContainer extends StatefulWidget {
   const HomeContainer({super.key});
@@ -28,11 +31,75 @@ class _HomeContainerState extends State<HomeContainer> {
   // Create a navigator key to control the nested navigator
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final ApiService _apiService = ApiService();
+  StreamSubscription? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkAddresses();
+    _listenForNotifications();
+  }
+
+  void _listenForNotifications() {
+    _notificationSubscription = NotificationService().updateStream.listen((
+      data,
+    ) {
+      if (data['type'] == 'order_chat') {
+        _showChatToast(data);
+      }
+    });
+  }
+
+  void _showChatToast(Map<String, dynamic> data) {
+    // data contains: type, order_id, title (maybe in notification part?), body
+    // The notification service passes 'data' from FCM message.
+    // FCM data usually has payload. Title/Body is in notification object,
+    // but NotificationService might pass data payload.
+    // Let's assume title/body might be passed if we added them to data in backend
+    // OR NotificationService logic needs to be checked.
+    // Wait, NotificationService _updateController.add(Map<String, dynamic>.from(message.data));
+    // message.data contains the 'data' payload from backend.
+    // Backend: data={'type': 'order_chat', 'order_id': ...}
+    // It does NOT contain the message text in 'data'. Message text is in notification.body.
+    // Standard FCM: 'notification': {'title':..., 'body': ...}, 'data': {...}
+    // message.data ONLY has the data block.
+    // So 'data' won't have the message text unless I put it there in backend.
+    // However, I verified backend views.py: send_push_notification arguments.
+    // send_push_notification(..., data={...})
+    // It seems I rely on NotificationService logic.
+    // NotificationService handles FOREGROUND messages by showing local notification.
+    // The STREAM is for "silent" or app-logic updates.
+    // If I want to SHOW A TOAST, I might need the body.
+    // User Requirement: "Show subtle in-app popup / toast... including View action".
+    // "New message from Retailer for Order #XXXX"
+    // I can construct generic text if body is missing.
+
+    final orderId = data['order_id'];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('New message from Retailer for Order #$orderId'),
+        action: SnackBarAction(
+          label: 'VIEW',
+          textColor: Colors.white,
+          onPressed: () {
+            if (orderId != null) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => OrderChatScreen(
+                    orderId: int.parse(orderId.toString()),
+                    orderNumber: '$orderId', // Placeholder if not available
+                  ),
+                ),
+              );
+            }
+          },
+        ),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 4),
+        backgroundColor: Colors.teal[800],
+      ),
+    );
   }
 
   Future<void> _checkAddresses() async {
@@ -155,6 +222,12 @@ class _HomeContainerState extends State<HomeContainer> {
             const Center(child: Text('Unknown Route'));
     }
     return MaterialPageRoute(builder: builder, settings: settings);
+  }
+
+  @override
+  void dispose() {
+    _notificationSubscription?.cancel();
+    super.dispose();
   }
 
   @override
