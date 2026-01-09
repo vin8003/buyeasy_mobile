@@ -135,7 +135,7 @@ class ApiService {
   }
 
   Future<void> _initBaseUrl() async {
-    _baseUrl = 'http://127.0.0.1:8000/api/';
+    _baseUrl = 'https://ordereasy.win/api/';
     _dio.options.baseUrl = _baseUrl;
     print('ApiService Initialized with Base URL: $_baseUrl');
   }
@@ -389,6 +389,26 @@ class ApiService {
     return _dio.post(
       'retailers/$retailerId/reviews/create/',
       data: {'rating': rating, 'comment': comment},
+    );
+  }
+
+  Future<Response> createOrderFeedback(
+    int orderId,
+    int overallRating,
+    int productRating,
+    int deliveryRating,
+    int serviceRating,
+    String comment,
+  ) {
+    return _dio.post(
+      'orders/$orderId/feedback/',
+      data: {
+        'overall_rating': overallRating,
+        'product_quality_rating': productRating,
+        'delivery_rating': deliveryRating,
+        'service_rating': serviceRating,
+        'comment': comment,
+      },
     );
   }
 

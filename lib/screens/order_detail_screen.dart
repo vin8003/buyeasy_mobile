@@ -623,22 +623,47 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
             // Rating Button
             if (_order!['status'] == 'delivered') ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _showRatingDialog,
-                  icon: const Icon(Icons.star_rate_rounded),
-                  label: const Text('Rate Store'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              if (!(_order!['has_customer_feedback'] ?? false))
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _showRatingDialog,
+                    icon: const Icon(Icons.star_rate_rounded),
+                    label: const Text('Rate Store'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text(
+                        'You rated this order',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
 
             const SizedBox(height: 40),
@@ -649,7 +674,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   void _showRatingDialog() {
-    int localRating = 0;
+    int overallRating = 0;
+    // Simple version: use same rating for all categories for now to minimize UI changes,
+    // or expand dialog to ask for all via UI.
+    // Requirement says "rate a retailer from 1 to 5 stars".
+    // Backend expects 4 specific ratings. We can average them or just use one for all.
+    // Let's use the single rating for all 4 to keep UI simple for now, as user request implied simple "rate retailer".
+
     final commentController = TextEditingController();
 
     showDialog(
@@ -658,18 +689,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Rate Store'),
+              title: const Text('Rate Order'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('How was your experience with this store?'),
+                  const Text('How was your experience?'),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(5, (index) {
                       return IconButton(
                         icon: Icon(
-                          index < localRating
+                          index < overallRating
                               ? Icons.star_rate_rounded
                               : Icons.star_border_rounded,
                           color: Colors.amber,
@@ -677,7 +708,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         ),
                         onPressed: () {
                           setDialogState(() {
-                            localRating = index + 1;
+                            overallRating = index + 1;
                           });
                         },
                       );
@@ -700,11 +731,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: localRating == 0
+                  onPressed: overallRating == 0
                       ? null
                       : () async {
                           Navigator.pop(context);
-                          _submitReview(localRating, commentController.text);
+                          _submitReview(overallRating, commentController.text);
                         },
                   child: const Text('Submit'),
                 ),
@@ -719,23 +750,28 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   Future<void> _submitReview(int rating, String comment) async {
     setState(() => _isLoading = true);
     try {
-      final response = await _apiService.createRetailerReview(
-        _order!['retailer'],
-        rating,
+      // Backend expects 4 ratings. We'll use the same value for all.
+      final response = await _apiService.createOrderFeedback(
+        widget.orderId,
+        rating, // overall
+        rating, // product
+        rating, // delivery
+        rating, // service
         comment,
       );
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Thank you for your review!')),
+          const SnackBar(content: Text('Thank you for your feedback!')),
         );
-        _fetchOrderDetail();
+        _fetchOrderDetail(); // Refresh to update "has_customer_feedback" status
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error submitting review: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error submitting feedback: $e')));
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
