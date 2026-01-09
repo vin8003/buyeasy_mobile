@@ -12,7 +12,7 @@ class ApiService {
   String? _accessToken;
   String? _refreshToken;
 
-  String _baseUrl = 'http://ordereasy.win/api/';
+  String _baseUrl = 'https://ordereasy.win/api/';
 
   // Navigation key to allow navigating from outside the widget tree
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
