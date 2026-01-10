@@ -140,13 +140,6 @@ class ApiService {
     print('ApiService Initialized with Base URL: $_baseUrl');
   }
 
-  Future<void> setBaseUrl(String url) async {
-    _baseUrl = url;
-    _dio.options.baseUrl = url;
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('api_base_url', url);
-  }
-
   String get baseUrl => _baseUrl;
 
   Future<void> _retry(
