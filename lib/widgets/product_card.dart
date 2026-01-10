@@ -134,13 +134,16 @@ class _ProductCardState extends State<ProductCard> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[100],
-                        child: const Icon(
-                          Icons.broken_image,
-                          color: Colors.grey,
-                        ),
-                      ),
+                      errorWidget: (context, url, error) {
+                        debugPrint('Image Load Error for $url: $error');
+                        return Container(
+                          color: Colors.grey[100],
+                          child: const Icon(
+                            Icons.broken_image,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
